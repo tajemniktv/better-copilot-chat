@@ -544,6 +544,18 @@
             }
         },
         {
+            "id": "allenai-olmo-3-1-32b-think",
+            "name": "AllenAI: Olmo 3.1 32B Think",
+            "tooltip": "allenai/olmo-3.1-32b-think",
+            "maxInputTokens": 49152,
+            "maxOutputTokens": 16384,
+            "model": "allenai/olmo-3.1-32b-think",
+            "capabilities": {
+                "toolCalling": true,
+                "imageInput": false
+            }
+        },
+        {
             "id": "xiaomi-mimo-v2-flash",
             "name": "Xiaomi: MiMo-V2-Flash",
             "tooltip": "xiaomi/mimo-v2-flash",

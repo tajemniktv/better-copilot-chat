@@ -50,7 +50,6 @@
     "activationEvents": [
         "onFileSystem:chp-settings",
         "onLanguageModelProvider:chp.aihubmix",
-        "onLanguageModelProvider:chp.aiping",
         "onLanguageModelProvider:chp.antigravity",
         "onLanguageModelProvider:chp.blackbox",
         "onLanguageModelProvider:chp.chatjimmy",
@@ -70,8 +69,6 @@
         "onLanguageModelProvider:chp.ollama",
         "onLanguageModelProvider:chp.opencode",
         "onLanguageModelProvider:chp.qwencli",
-        "onLanguageModelProvider:chp.siliconflow",
-        "onLanguageModelProvider:chp.tbox",
         "onLanguageModelProvider:chp.zenmux",
         "onLanguageModelProvider:chp.zhipu",
         "onLanguageModelTool:chp_google_web_search",
@@ -732,18 +729,6 @@
                     "description": "Select SDK compatibility mode for MoonshotAI.",
                     "scope": "application"
                 },
-                "chp.siliconflow.baseUrl": {
-                    "type": "string",
-                    "default": "",
-                    "description": "SiliconFlow base URL or proxy endpoint (optional).",
-                    "scope": "application"
-                },
-                "chp.tbox.baseUrl": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Bailian base URL or proxy endpoint (optional).",
-                    "scope": "application"
-                },
                 "chp.modelscope.sdkMode": {
                     "type": "string",
                     "enum": [
@@ -752,6 +737,16 @@
                     ],
                     "default": "anthropic",
                     "description": "Select SDK compatibility mode for ModelScope.",
+                    "scope": "application"
+                },
+                "chp.minimax.sdkMode": {
+                    "type": "string",
+                    "enum": [
+                        "openai",
+                        "anthropic"
+                    ],
+                    "default": "anthropic",
+                    "description": "Select SDK compatibility mode for MiniMax.",
                     "scope": "application"
                 }
             }
@@ -771,24 +766,6 @@
                         "apiKey": {
                             "type": "string",
                             "description": "AIHubMix API key.",
-                            "secret": true
-                        },
-                        "baseUrl": {
-                            "type": "string",
-                            "description": "Custom base URL or proxy endpoint (optional). Overrides the default API endpoint.",
-                            "default": ""
-                        }
-                    }
-                }
-            },
-            {
-                "vendor": "chp.aiping",
-                "displayName": "⦿ AIPing",
-                "configuration": {
-                    "properties": {
-                        "apiKey": {
-                            "type": "string",
-                            "description": "AIPing API key.",
                             "secret": true
                         },
                         "baseUrl": {
@@ -1107,42 +1084,6 @@
                             "type": "string",
                             "description": "Qwen CLI API key.",
                             "secret": true
-                        }
-                    }
-                }
-            },
-            {
-                "vendor": "chp.siliconflow",
-                "displayName": "⦿ SiliconFlow",
-                "configuration": {
-                    "properties": {
-                        "apiKey": {
-                            "type": "string",
-                            "description": "SiliconFlow API key.",
-                            "secret": true
-                        },
-                        "baseUrl": {
-                            "type": "string",
-                            "description": "Custom base URL or proxy endpoint (optional). Overrides the default API endpoint.",
-                            "default": ""
-                        }
-                    }
-                }
-            },
-            {
-                "vendor": "chp.tbox",
-                "displayName": "⦿ Bailian",
-                "configuration": {
-                    "properties": {
-                        "apiKey": {
-                            "type": "string",
-                            "description": "Bailian API key.",
-                            "secret": true
-                        },
-                        "baseUrl": {
-                            "type": "string",
-                            "description": "Custom base URL or proxy endpoint (optional). Overrides the default API endpoint.",
-                            "default": ""
                         }
                     }
                 }

@@ -100,11 +100,6 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 			cooldownMinutes: 10,
 		},
 	},
-	aiping: {
-		displayName: "AIPing",
-		family: "AIPing",
-		openai: { baseUrl: "https://api.aiping.com/v1" },
-	},
 	antigravity: {
 		displayName: "Antigravity",
 		family: "Antigravity",
@@ -292,7 +287,7 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 		openai: { baseUrl: "https://ollama.com/v1" },
 		anthropic: { baseUrl: "https://ollama.com" },
 		fetchModels: true,
-		modelsEndpoint: "/model",
+		modelsEndpoint: "/models",
 		modelParser: {
 			arrayPath: "data",
 			descriptionField: "id",
