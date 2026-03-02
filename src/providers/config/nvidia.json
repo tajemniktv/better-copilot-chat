@@ -1805,30 +1805,6 @@
             }
         },
         {
-            "id": "openai-gpt-oss-120b",
-            "name": "openai/gpt-oss-120b",
-            "tooltip": "openai/gpt-oss-120b",
-            "maxInputTokens": 111616,
-            "maxOutputTokens": 16384,
-            "model": "openai/gpt-oss-120b",
-            "capabilities": {
-                "toolCalling": true,
-                "imageInput": false
-            }
-        },
-        {
-            "id": "openai-gpt-oss-20b",
-            "name": "openai/gpt-oss-20b",
-            "tooltip": "openai/gpt-oss-20b",
-            "maxInputTokens": 111616,
-            "maxOutputTokens": 16384,
-            "model": "openai/gpt-oss-20b",
-            "capabilities": {
-                "toolCalling": true,
-                "imageInput": false
-            }
-        },
-        {
             "id": "openai-gpt-oss-20b",
             "name": "openai/gpt-oss-20b",
             "tooltip": "openai/gpt-oss-20b",

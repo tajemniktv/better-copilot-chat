@@ -268,18 +268,6 @@
             }
         },
         {
-            "id": "openai-gpt-4-turbo-preview",
-            "name": "LitLogger helper",
-            "tooltip": "openai/gpt-4-turbo-preview",
-            "maxInputTokens": 111616,
-            "maxOutputTokens": 16384,
-            "model": "openai/gpt-4-turbo-preview",
-            "capabilities": {
-                "toolCalling": true,
-                "imageInput": true
-            }
-        },
-        {
             "id": "anthropic-claude-opus-4-6",
             "name": "Claude Opus 4.6",
             "tooltip": "anthropic/claude-opus-4-6",

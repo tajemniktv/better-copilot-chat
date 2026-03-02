@@ -2,52 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.6] - 2026-03-01
+## [0.2.6] - 2026-03-02
 
 ### Added
 
-**NVIDIA Provider Dynamic Model Fetching:**
-- **Dynamic Model Discovery**: NVIDIA NIM provider now dynamically fetches models from the NVIDIA API (`/models` endpoint) similar to Chutes and Kilo providers.
-- **Background Updates**: Models are fetched in the background with a 10-minute cooldown to avoid excessive API calls.
-- **Auto-Config Updates**: Fetched models are automatically merged into `nvidia.json` config file for persistence.
-- **Immediate Availability**: Returns cached models instantly while fetching updates asynchronously.
-- **Capability Detection**: Automatically detects vision capabilities from model metadata (`input_modalities`).
+**Declarative Provider System:**
+- **Zero-Code Provider Definition**: Providers can now be defined entirely in `knownProviders.ts` without needing individual provider folders, classes, or JSON config files.
+- **Unified SDK Compatibility**: All providers now support a unified configuration structure with `openai` and `anthropic` SDK compatibility modes.
+- **Automatic SDK Switching**: Added `sdkMode` setting for dual-SDK providers (DeepSeek, Moonshot, AIHubMix, Ollama, etc.), allowing users to switch between OpenAI and Anthropic protocols with a single setting.
+- **Auto-Sync package.json**: Implemented logic to automatically keep `package.json` settings, activation events, and registrations in sync with the provider registry.
 
-**Claude Model Support:**
-- **200K Context Window**: All Claude models now have 200,000 token max window (168K input / 32K output).
-- **Vision Support**: All Claude models now support image input for multimodal conversations.
+**Dynamic Model Discovery Refactor:**
+- **Generic Dynamic Provider**: Introduced `DynamicModelProvider` which centralizes model discovery logic for all OpenAI-compatible providers.
+- **Auto-Update Static Configs**: The system now automatically creates and updates `.json` configuration files in `src/providers/config/` when new models are discovered via API.
+- **Intelligent URL Construction**: Improved model endpoint resolution with automatic path normalization (prevents redundant `/v1` segments).
+- **Duplicate Prevention**: Added robust deduplication to prevent multiple registrations of the same model during dynamic updates.
 
-**Load Balancing System for All API Providers:**
-- **Multi-API Key Support**: Users can now add multiple API keys per provider and enable load balancing to distribute requests across all configured keys.
-- **3 Load Balancing Strategies**:
-  - **Round Robin**: Distributes requests evenly across all accounts in sequence.
-  - **Quota Aware**: Automatically prioritizes accounts with more remaining quota (requires quota information from provider).
-  - **Failover Only**: Uses primary account and only switches to backup accounts on errors.
-- **Unified Provider Settings**: Load balancing toggle and strategy selector directly in the provider configuration panel.
-- **Per-Provider Configuration**: Each provider can have its own load balancing strategy independently configured.
-- **Works with All API Key Providers**: Compatible with OpenAI, Claude, DeepSeek, Zhipu, MiniMax, Moonshot, DeepInfra, Mistral, Ollama, HuggingFace, and all other API key-based providers.
+**Enhanced Model Support:**
+- **Claude Opus 4.6**: Added specialized support for Claude Opus 4.6 with a 1,000,000 token context window and 64,000 token output limit.
+- **Ollama Dynamic Support**: Fully integrated Ollama with dynamic model fetching and dual-SDK (OpenAI/Anthropic) support.
+- **AIHubMix Dynamic Support**: Enabled dynamic model discovery for AIHubMix via the `/models` endpoint.
 
-**Automatic Provider Registration (No Configuration Required):**
-- **Providers Auto-Register with VS Code**: All providers now automatically register with VS Code's language model system immediately upon extension activation, without requiring any API key or configuration.
-  - Static models from config files are available right away.
-  - Users can see all available models without entering API keys.
-  - API key is only required when actually making requests to the provider.
-- **Works Offline**: Provider models are visible even without network connectivity (using static config).
+### Changed
 
-**Automatic Dynamic Model Fetching:**
-- **All Providers Now Auto-Fetch Models**: When a provider is configured with an API key, the extension now automatically fetches the latest available models from the provider's `/models` API endpoint.
-  - Works with all providers using `GenericModelProvider` (Zhipu, MiniMax, Moonshot, DeepSeek, DeepInfra, Mistral, HuggingFace, Ollama, and more).
-  - No need to manually add models to configuration files - they're fetched automatically.
-  - Falls back to pre-configured models if API call fails (network issues, rate limiting, etc.).
-- **Background Model Updates**: Model fetching happens in the background when user opens the chat to avoid delaying extension startup.
-- **Auto-Config Updates**: When new models are fetched from the API, they're automatically merged into the provider's config file for persistence.
-- **Non-Blocking UI**: Model fetching is asynchronous and doesn't block the extension from loading.
+**Codebase Simplification:**
+- **Removed 10+ Provider Folders**: Deleted specialized provider implementations for `kilo`, `chutes`, `huggingface`, `lightningai`, `opencode`, `zenmux`, `nvidia`, `mistral`, `minimax`, and `moonshot`. These are now handled by the generic dynamic system, reducing codebase complexity by ~40%.
+- **Unified Registration Flow**: All providers (except specialized ones like Gemini/Antigravity) now use a single, consistent registration path.
 
-**Antigravity UI Enhancements:**
-- **Visual Pacing Bar**: Redesigned status bar with a dynamic pacing indicator `[▰▰▰┃▮▮▯┃▱▱▱]` (inspired by `copilot-pacer`).
-- **Intelligent Pacing**: Added logic to track usage relative to the time of day, showing if you are "On track" or "Over budget".
-- **GitHub-Style Tooltip**: Updated quota tooltip with a structured layout, including account details and model usage tables (inspired by `mcp_github_get_commit`).
-- **Request Summary**: Added a professional request summary footer in chat responses with short request IDs and metadata.
+### Fixed
+
+- **Settings Page Rendering**: Fixed an issue where declarative providers were not appearing in the modern settings interface.
+- **Mistral Duplicate Models**: Resolved a bug where Mistral models were being registered multiple times.
+- **URL Construction**: Fixed incorrect model endpoint URLs for providers with nested path structures.
+- **Wizard Compatibility**: Ensured specialized configuration wizards (MiniMax, Moonshot) still work correctly within the new dynamic system.
+
 - **Quota Display in Status Bar**: Added Antigravity (Cloud Code) quota status bar showing remaining quota for Gemini and Claude models.
   - Separate status and bar items for Gemini Claude quotas.
   - Color-coded display: Red when <10% or over budget, Orange when <30% or slightly over pace, Green when >=30% and on track.

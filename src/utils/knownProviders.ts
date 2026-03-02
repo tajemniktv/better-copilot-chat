@@ -14,6 +14,8 @@ import type {
 	ProviderOverride,
 } from "../types/sharedTypes";
 import { Logger } from "./logger";
+import { MiniMaxWizard } from "../providers/minimax/minimaxWizard";
+import { MoonshotWizard } from "../providers/moonshot/moonshotWizard";
 
 export interface KnownProviderConfig
 	extends Partial<ProviderConfig & ProviderOverride> {
@@ -225,7 +227,15 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 		displayName: "MiniMax",
 		family: "MiniMax",
 		description: "MiniMax family models with coding endpoint options",
-		openai: { baseUrl: "https://api.minimax.chat/v1" },
+		openai: { baseUrl: "https://api.minimaxi.com/v1" },
+		anthropic: { baseUrl: "https://api.minimaxi.com/anthropic" },
+		fetchModels: true,
+		modelsEndpoint: "/models",
+		modelParser: {
+			arrayPath: "data",
+			descriptionField: "id",
+			cooldownMinutes: 10,
+		},
 	},
 	mistral: {
 		displayName: "Mistral AI",
@@ -233,6 +243,7 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 		description: "Mistral AI model endpoints",
 		openai: { baseUrl: "https://api.mistral.ai/v1" },
 		apiKeyTemplate: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		fetchModels: false, // Mistral's model list is static and doesn't require fetching
 	},
 	modelscope: {
 		displayName: "ModelScope",
@@ -253,6 +264,13 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 		description: "MoonshotAI Kimi model family",
 		openai: { baseUrl: "https://api.moonshot.cn/v1" },
 		anthropic: { baseUrl: "https://api.kimi.com/coding" },
+		fetchModels: true,
+		modelsEndpoint: "/models",
+		modelParser: {
+			arrayPath: "data",
+			descriptionField: "id",
+			cooldownMinutes: 10,
+		},
 	},
 	nvidia: {
 		displayName: "NVIDIA NIM",
@@ -299,16 +317,6 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 		family: "Qwen",
 		description: "Qwen CLI OAuth provider",
 		openai: { baseUrl: "https://api.qwen.ai/v1" },
-	},
-	siliconflow: {
-		displayName: "SiliconFlow",
-		family: "SiliconFlow",
-		openai: { baseUrl: "https://api.siliconflow.cn/v1" },
-	},
-	tbox: {
-		displayName: "Bailian",
-		family: "Bailian",
-		openai: { baseUrl: "https://bailian.aliyuncs.com/v1" },
 	},
 	zenmux: {
 		displayName: "Zenmux",
@@ -387,14 +395,6 @@ const specializedProviderFactories: Record<string, ProviderFactory> = {
 		() => import("../providers/geminicli/provider.js"),
 		"GeminiCliProvider",
 	),
-	minimax: createLazyFactory(
-		() => import("../providers/minimax/minimaxProvider.js"),
-		"MiniMaxProvider",
-	),
-	moonshot: createLazyFactory(
-		() => import("../providers/moonshot/moonshotProvider.js"),
-		"MoonshotProvider",
-	),
 	qwencli: createLazyFactory(
 		() => import("../providers/qwencli/provider.js"),
 		"QwenCliProvider",
@@ -442,6 +442,62 @@ async function registerProvider(
 				providerConfig,
 				knownConfig,
 			);
+
+			// Register specialized commands for MiniMax and Moonshot
+			if (providerKey === "minimax") {
+				const setCodingKeyCommand = vscode.commands.registerCommand(
+					`chp.${providerKey}.setCodingPlanApiKey`,
+					async () => {
+						await MiniMaxWizard.setCodingPlanApiKey(
+							providerConfig.displayName,
+							providerConfig.apiKeyTemplate,
+						);
+						await (result.provider as any).modelInfoCache?.invalidateCache(
+							"minimax-coding",
+						);
+						(
+							result.provider as any
+						)._onDidChangeLanguageModelChatInformation.fire();
+					},
+				);
+
+				const setCodingPlanEndpointCommand = vscode.commands.registerCommand(
+					`chp.${providerKey}.setCodingPlanEndpoint`,
+					async () => {
+						await MiniMaxWizard.setCodingPlanEndpoint(
+							providerConfig.displayName,
+						);
+					},
+				);
+
+				const configWizardCommand = vscode.commands.registerCommand(
+					`chp.${providerKey}.configWizard`,
+					async () => {
+						await MiniMaxWizard.startWizard(
+							providerConfig.displayName,
+							providerConfig.apiKeyTemplate,
+						);
+					},
+				);
+
+				result.disposables.push(
+					setCodingKeyCommand,
+					setCodingPlanEndpointCommand,
+					configWizardCommand,
+				);
+			} else if (providerKey === "moonshot") {
+				const configWizardCommand = vscode.commands.registerCommand(
+					`chp.${providerKey}.configWizard`,
+					async () => {
+						await MoonshotWizard.startWizard(
+							providerConfig.displayName,
+							providerConfig.apiKeyTemplate,
+						);
+					},
+				);
+
+				result.disposables.push(configWizardCommand);
+			}
 		} else {
 			const { GenericModelProvider } = await import(
 				"../providers/common/genericModelProvider.js"

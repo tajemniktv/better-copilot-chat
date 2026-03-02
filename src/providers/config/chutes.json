@@ -232,18 +232,6 @@
             }
         },
         {
-            "id": "deepseek-ai-deepseek-v3-1-terminus-tee",
-            "name": "deepseek-ai/DeepSeek-V3.1-Terminus-TEE",
-            "tooltip": "deepseek-ai/DeepSeek-V3.1-Terminus-TEE",
-            "maxInputTokens": 147456,
-            "maxOutputTokens": 16384,
-            "model": "deepseek-ai/DeepSeek-V3.1-Terminus-TEE",
-            "capabilities": {
-                "toolCalling": true,
-                "imageInput": false
-            }
-        },
-        {
             "id": "unsloth-mistral-small-24b-instruct-2501",
             "name": "unsloth/Mistral-Small-24B-Instruct-2501",
             "tooltip": "unsloth/Mistral-Small-24B-Instruct-2501",
@@ -262,6 +250,18 @@
             "maxInputTokens": 114688,
             "maxOutputTokens": 16384,
             "model": "chutesai/Mistral-Small-3.2-24B-Instruct-2506",
+            "capabilities": {
+                "toolCalling": true,
+                "imageInput": false
+            }
+        },
+        {
+            "id": "deepseek-ai-deepseek-v3-1-terminus-tee",
+            "name": "deepseek-ai/DeepSeek-V3.1-Terminus-TEE",
+            "tooltip": "deepseek-ai/DeepSeek-V3.1-Terminus-TEE",
+            "maxInputTokens": 147456,
+            "maxOutputTokens": 16384,
+            "model": "deepseek-ai/DeepSeek-V3.1-Terminus-TEE",
             "capabilities": {
                 "toolCalling": true,
                 "imageInput": false
