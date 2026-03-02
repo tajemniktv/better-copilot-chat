@@ -137,6 +137,8 @@ export class DynamicModelProvider extends GenericModelProvider {
 		const headers: Record<string, string> = {
 			"User-Agent": getUserAgent(),
 			Accept: "application/json",
+			...(this.knownConfig.customHeader || {}),
+			...(this.knownConfig.openai?.customHeader || {}),
 		};
 		if (apiKey) {
 			headers.Authorization = `Bearer ${apiKey}`;

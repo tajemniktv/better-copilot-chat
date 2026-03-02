@@ -1,5 +1,6 @@
 export enum ProviderKey {
 	Antigravity = "antigravity",
+	AIHubMix = "aihubmix",
 	Chutes = "chutes",
 	Codex = "codex",
 	DeepInfra = "deepinfra",
@@ -12,6 +13,7 @@ export enum ProviderKey {
 	Mistral = "mistral",
 	MiniMax = "minimax",
 	MiniMaxCoding = "minimax-coding",
+	ModelScope = "modelscope",
 	Moonshot = "moonshot",
 	Nvidia = "nvidia",
 	Ollama = "ollama",

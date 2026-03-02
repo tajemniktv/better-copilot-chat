@@ -129,6 +129,11 @@
                 "category": "Copilot ++"
             },
             {
+                "command": "chp.aihubmix.setApiKey",
+                "title": "Configure AIHubMix",
+                "category": "Copilot ++"
+            },
+            {
                 "command": "chp.chutes.setApiKey",
                 "title": "Configure Chutes",
                 "category": "Copilot ++"
@@ -181,6 +186,11 @@
             {
                 "command": "chp.mistral.setApiKey",
                 "title": "Configure Mistral AI",
+                "category": "Copilot ++"
+            },
+            {
+                "command": "chp.modelscope.setApiKey",
+                "title": "Configure ModelScope",
                 "category": "Copilot ++"
             },
             {

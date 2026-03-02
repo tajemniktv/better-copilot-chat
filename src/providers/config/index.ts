@@ -1,5 +1,6 @@
 import type { ProviderConfig } from "../../types/sharedTypes";
 import antigravity from "./antigravity.json";
+import aihubmix from "./aihubmix.json";
 import blackbox from "./blackbox.json";
 import chatjimmy from "./chatjimmy.json";
 import chutes from "./chutes.json";
@@ -12,6 +13,7 @@ import kilo from "./kilo.json";
 import lightningai from "./lightningai.json";
 import minimax from "./minimax.json";
 import mistral from "./mistral.json";
+import modelscope from "./modelscope.json";
 import moonshot from "./moonshot.json";
 import nvidia from "./nvidia.json";
 import opencode from "./opencode.json";
@@ -30,6 +32,7 @@ const providers = {
 	codex,
 	nvidia,
 	antigravity,
+	aihubmix,
 	chatjimmy,
 	chutes,
 	opencode,
@@ -41,6 +44,7 @@ const providers = {
 	lightningai,
 	deepinfra,
 	mistral,
+	modelscope,
 	zenmux,
 };
 

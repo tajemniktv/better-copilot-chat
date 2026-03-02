@@ -107,6 +107,14 @@ export class AccountManager {
 			},
 		],
 		[
+			ProviderKey.AIHubMix,
+			{
+				supportsMultiAccount: true,
+				supportsOAuth: false,
+				supportsApiKey: true,
+			},
+		],
+		[
 			ProviderKey.Chutes,
 			{
 				supportsMultiAccount: true,
@@ -148,6 +156,14 @@ export class AccountManager {
 		],
 		[
 			ProviderKey.Mistral,
+			{
+				supportsMultiAccount: true,
+				supportsOAuth: false,
+				supportsApiKey: true,
+			},
+		],
+		[
+			ProviderKey.ModelScope,
 			{
 				supportsMultiAccount: true,
 				supportsOAuth: false,
