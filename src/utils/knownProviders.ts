@@ -317,7 +317,7 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 		displayName: "Zenmux",
 		family: "Zenmux",
 		description: "Zenmux endpoint integration",
-		openai: { baseUrl: "https://api.zenmux.ai/v1" },
+		openai: { baseUrl: "https://zenmux.ai/api/v1" },
 		fetchModels: true,
 		modelsEndpoint: "/models",
 		modelParser: {
