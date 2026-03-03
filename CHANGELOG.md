@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.8] - 2026-03-03
+## [0.2.7] - 2026-03-03
+
+### Added
+
+- **Blackbox AI Default API Key**: Added `defaultApiKey: "xxx"` to Blackbox AI provider, allowing it to work without explicit user configuration.
+- **User-Agent Pool**: All providers now use rotating browser-like User-Agent strings from `USER_AGENT_POOL` for better compatibility.
+
+### Fixed
+
+- **Open Model Endpoint Support**: Fixed `openModelEndpoint` flag not being respected in `DynamicModelProvider`. Providers with open model endpoints (NVIDIA, Chutes, Hugging Face, Kilo AI, LightningAI, Ollama, OpenCode, Zenmux, Blackbox, etc.) now correctly fetch models without requiring an API key.
+- **Blackbox AI Authorization**: Fixed `401 Unauthorized` errors by properly using the default API key when no user-configured key exists.
+
+## [0.2.6] - 2026-03-02
 
 ### Added
 
@@ -13,10 +25,6 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - **Dynamic Model Update Logic**: Fixed an issue where background model updates were skipped when models were already cached. The system now always triggers a background fetch for providers with dynamic model support to ensure config files and cache stay up-to-date.
-
-## [0.2.7] - 2026-03-03
-
-### Fixed
 
 - **Production Config File Paths**: Fixed issue where provider config files could not be found in production builds.
   - Updated esbuild configuration to copy provider JSON configs from `src/providers/config/` to `dist/providers/config/` during build.
