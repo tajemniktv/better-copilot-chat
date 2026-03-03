@@ -13,7 +13,7 @@ import type {
 } from "@vscode/chat-lib/dist/src/_internal/platform/networking/common/fetcherService";
 import type { IFetcher } from "@vscode/chat-lib/dist/src/_internal/platform/networking/common/networking";
 import type { NESCompletionConfig } from "../utils/configManager";
-import { VersionManager } from "../utils/versionManager";
+import { getUserAgent } from "../utils/userAgent";
 import {
 	getApiKeyManager,
 	getCompletionLogger,
@@ -176,7 +176,7 @@ export class Fetcher implements IFetcher {
 				requestHeaders = {
 					...(options.headers || {}),
 					"Content-Type": "application/json",
-					"User-Agent": VersionManager.getUserAgent(provider),
+					"User-Agent": getUserAgent(),
 					"Authorization": `Bearer ${apiKey}`,
 				};
 			} else {
@@ -184,7 +184,7 @@ export class Fetcher implements IFetcher {
 				requestHeaders = {
 					...(options.headers || {}),
 					"Content-Type": "application/json",
-					"User-Agent": VersionManager.getUserAgent(provider),
+					"User-Agent": getUserAgent(),
 				};
 			}
 

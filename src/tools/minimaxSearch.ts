@@ -7,7 +7,7 @@ import * as https from "node:https";
 import * as vscode from "vscode";
 import { ConfigManager, Logger } from "../utils";
 import { ApiKeyManager } from "../utils/apiKeyManager";
-import { VersionManager } from "../utils/versionManager";
+import { getUserAgent } from "../utils/userAgent";
 
 /**
  * MiniMax search request parameters
@@ -64,7 +64,7 @@ export class MiniMaxSearchTool {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${apiKey}`,
 				"Content-Length": Buffer.byteLength(requestData),
-				"User-Agent": VersionManager.getUserAgent("MiniMaxSearch"),
+				"User-Agent": getUserAgent(),
 			},
 		};
 

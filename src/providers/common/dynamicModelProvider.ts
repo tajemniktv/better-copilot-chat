@@ -306,6 +306,9 @@ export class DynamicModelProvider extends GenericModelProvider {
 
 	private async ensureApiKey(silent: boolean): Promise<string | undefined> {
 		let apiKey = await ApiKeyManager.getApiKey(this.providerKey);
+		if (!apiKey && this.knownConfig.defaultApiKey) {
+			return this.knownConfig.defaultApiKey;
+		}
 		if (!apiKey && !silent) {
 			await ApiKeyManager.promptAndSetApiKey(
 				this.providerKey,

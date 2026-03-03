@@ -26,6 +26,8 @@ import {
 	OpenAIHandler,
 	TokenCounter,
 } from "../../utils";
+import { getUserAgent } from "../../utils/userAgent";
+import { KnownProviders } from "../../utils/knownProviders";
 import { ProviderWizard } from "../../utils/providerWizard";
 import { MoonshotWizard } from "../moonshot/moonshotWizard";
 
@@ -266,14 +268,10 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 			const abortController = new AbortController();
 			const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15 second timeout
 
-			const ext = vscode.extensions.getExtension("OEvortex.better-copilot-chat");
-			const extVersion = ext?.packageJSON?.version ?? "unknown";
-			const vscodeVersion = vscode.version;
-			const userAgent = `better-copilot-chat/${extVersion} VSCode/${vscodeVersion}`;
-
 			// Build headers - only add Authorization if apiKey is provided
 			const headers: Record<string, string> = {
-				"User-Agent": userAgent,
+				"User-Agent": getUserAgent(),
+				Accept: "application/json",
 			};
 			if (apiKey) {
 				headers.Authorization = `Bearer ${apiKey}`;
@@ -564,7 +562,8 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 				// Also trigger background API fetch to update config files and cache if needed
 				if (this.shouldFetchModelsFromApi() && !options.silent) {
 					if (this.hasOpenModelEndpoint()) {
-						this.fetchAndUpdateModelsAsync("");
+						const defaultKey = KnownProviders[this.providerKey]?.defaultApiKey || "";
+						this.fetchAndUpdateModelsAsync(defaultKey);
 					} else {
 						ApiKeyManager.getApiKey(this.providerKey).then((apiKey) => {
 							if (apiKey) {
@@ -594,8 +593,9 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 		if (this.shouldFetchModelsFromApi()) {
 			// Check if provider has open model endpoint (no API key required)
 			if (this.hasOpenModelEndpoint() && !options.silent) {
-				// Fetch models without API key for open endpoints
-				this.fetchAndUpdateModelsAsync("");
+				// Fetch models with default API key if available, otherwise without
+				const defaultKey = KnownProviders[this.providerKey]?.defaultApiKey || "";
+				this.fetchAndUpdateModelsAsync(defaultKey);
 			} else {
 				// Try to get API key silently - won't prompt user
 				const apiKey = await ApiKeyManager.getApiKey(this.providerKey);

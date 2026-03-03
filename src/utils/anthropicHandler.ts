@@ -14,11 +14,12 @@ import { OpenAIHandler } from "../providers/openai/openaiHandler";
 import type { ModelConfig } from "../types/sharedTypes";
 import { ApiKeyManager } from "./apiKeyManager";
 import { ConfigManager } from "./configManager";
+import { KnownProviders } from "./knownProviders";
 import { Logger } from "./logger";
 import { RateLimiter } from "./rateLimiter";
 import { TokenCounter } from "./tokenCounter";
 import { TokenTelemetryTracker } from "./tokenTelemetryTracker";
-import { VersionManager } from "./versionManager";
+import { getUserAgent } from "./userAgent";
 
 /**
  * Anthropic compatible handler class
@@ -52,7 +53,13 @@ export class AnthropicHandler {
 		if (!currentApiKey) {
 			currentApiKey = await ApiKeyManager.getApiKey(providerKey);
 			if (!currentApiKey) {
-				throw new Error(`Missing ${this.displayName} API key`);
+				// Try defaultApiKey from known provider config
+				const knownConfig = KnownProviders[providerKey];
+				if (knownConfig?.defaultApiKey) {
+					currentApiKey = knownConfig.defaultApiKey;
+				} else {
+					throw new Error(`Missing ${this.displayName} API key`);
+				}
 			}
 		}
 
@@ -75,7 +82,7 @@ export class AnthropicHandler {
 
 		// Build default headers, including provider-level and model-level customHeader
 		const defaultHeaders: Record<string, string> = {
-			"User-Agent": VersionManager.getUserAgent(this.provider),
+			"User-Agent": getUserAgent(),
 		};
 
 		// Process model-level customHeader

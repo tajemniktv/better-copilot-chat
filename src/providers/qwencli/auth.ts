@@ -6,6 +6,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Logger } from "../../utils/logger";
+import { getUserAgent } from "../../utils/userAgent";
 import {
 	QWEN_DEFAULT_BASE_URL,
 	QWEN_OAUTH_CLIENT_ID,
@@ -101,8 +102,7 @@ export class QwenOAuthManager {
 					headers: {
 						"Content-Type": "application/x-www-form-urlencoded",
 						Accept: "application/json",
-						"User-Agent":
-							"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+					"User-Agent": getUserAgent(),
 					},
 					body: bodyData.toString(),
 				});

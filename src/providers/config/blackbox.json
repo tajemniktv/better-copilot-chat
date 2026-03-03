@@ -2,7 +2,7 @@
     "displayName": "Blackbox AI",
     "baseUrl": "https://oi-vscode-server-985058387028.europe-west1.run.app",
     "apiKeyTemplate": "xxx",
-    "supportsApiKey": false,
+    "supportsApiKey": true,
     "models": [
         {
             "id": "moonshotai/kimi-k2.5",

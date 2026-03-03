@@ -9,8 +9,9 @@ import { AccountQuotaCache } from "../../accounts/accountQuotaCache";
 import type { ModelConfig } from "../../types/sharedTypes";
 import { ApiKeyManager } from "../../utils/apiKeyManager";
 import { ConfigManager } from "../../utils/configManager";
+import { KnownProviders } from "../../utils/knownProviders";
 import { Logger } from "../../utils/logger";
-import { VersionManager } from "../../utils/versionManager";
+import { getUserAgent } from "../../utils/userAgent";
 import { OpenAIHandler } from "../openai/openaiHandler";
 import {
 	apiMessageToAnthropicMessage,
@@ -42,9 +43,15 @@ export class AnthropicHandler {
 		accountId?: string,
 	): Promise<Anthropic> {
 		const providerKey = modelConfig?.provider || this.provider;
-		const currentApiKey = await ApiKeyManager.getApiKey(providerKey);
+		let currentApiKey = await ApiKeyManager.getApiKey(providerKey);
 		if (!currentApiKey) {
-			throw new Error(`Missing ${this.displayName} API key`);
+			// Try defaultApiKey from known provider config
+			const knownConfig = KnownProviders[providerKey];
+			if (knownConfig?.defaultApiKey) {
+				currentApiKey = knownConfig.defaultApiKey;
+			} else {
+				throw new Error(`Missing ${this.displayName} API key`);
+			}
 		}
 
 		// Use model configuration baseUrl or provider's default baseURL
@@ -66,7 +73,7 @@ export class AnthropicHandler {
 
 		// Build default headers, including provider-level and model-level customHeader
 		const defaultHeaders: Record<string, string> = {
-			"User-Agent": VersionManager.getUserAgent(this.provider),
+			"User-Agent": getUserAgent(),
 		};
 
 		// Process model-level customHeader

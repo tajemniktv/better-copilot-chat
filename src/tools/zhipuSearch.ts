@@ -12,7 +12,7 @@ import {
 	MCPWebSearchClient,
 	type WebSearchRequest,
 } from "../utils/mcpWebSearchClient";
-import { VersionManager } from "../utils/versionManager";
+import { getUserAgent } from "../utils/userAgent";
 
 /**
  * ZhipuAI search engine type
@@ -146,7 +146,7 @@ export class ZhipuSearchTool {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${apiKey}`,
 				"Content-Length": Buffer.byteLength(requestData),
-				"User-Agent": VersionManager.getUserAgent("ZhipuSearch"),
+				"User-Agent": getUserAgent(),
 			},
 		};
 

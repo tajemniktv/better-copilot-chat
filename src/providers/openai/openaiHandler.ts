@@ -9,11 +9,12 @@ import { AccountQuotaCache } from "../../accounts/accountQuotaCache";
 import type { ModelConfig } from "../../types/sharedTypes";
 import { ApiKeyManager } from "../../utils/apiKeyManager";
 import { ConfigManager } from "../../utils/configManager";
+import { KnownProviders } from "../../utils/knownProviders";
 import { Logger } from "../../utils/logger";
 import { RateLimiter } from "../../utils/rateLimiter";
 import { TokenCounter } from "../../utils/tokenCounter";
 import { TokenTelemetryTracker } from "../../utils/tokenTelemetryTracker";
-import { VersionManager } from "../../utils/versionManager";
+import { getUserAgent } from "../../utils/userAgent";
 import type {
 	ExtendedAssistantMessageParam,
 	ExtendedChoice,
@@ -90,7 +91,13 @@ export class OpenAIHandler {
 		if (!currentApiKey) {
 			currentApiKey = await ApiKeyManager.getApiKey(providerKey);
 			if (!currentApiKey) {
-				throw new Error(`Missing ${this.displayName} API key`);
+				// Try defaultApiKey from known provider config
+				const knownConfig = KnownProviders[providerKey];
+				if (knownConfig?.defaultApiKey) {
+					currentApiKey = knownConfig.defaultApiKey;
+				} else {
+					throw new Error(`Missing ${this.displayName} API key`);
+				}
 			}
 		}
 
@@ -107,7 +114,7 @@ export class OpenAIHandler {
 
 		// Build default headers, including custom headers
 		const defaultHeaders: Record<string, string> = {
-			"User-Agent": VersionManager.getUserAgent("OpenAI"),
+			"User-Agent": getUserAgent(),
 		};
 
 		// Process model-level customHeader

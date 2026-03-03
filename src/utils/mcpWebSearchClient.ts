@@ -10,6 +10,7 @@ import type { ZhipuSearchResult } from "../tools/zhipuSearch";
 import { ApiKeyManager } from "./apiKeyManager";
 import { ConfigManager } from "./configManager";
 import { Logger } from "./logger";
+import { getUserAgent } from "./userAgent";
 import { VersionManager } from "./versionManager";
 
 /**
@@ -44,7 +45,7 @@ export class MCPWebSearchClient {
 	private connectionPromise: Promise<void> | null = null;
 
 	private constructor() {
-		this.userAgent = VersionManager.getUserAgent("MCPWebSearch");
+		this.userAgent = getUserAgent();
 	}
 
 	/**

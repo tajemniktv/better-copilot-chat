@@ -29,6 +29,8 @@ export interface KnownProviderConfig
 	apiKeyTemplate?: string;
 	/** Whether this provider requires an API key */
 	supportsApiKey?: boolean;
+	/** Default API key to use when no user-configured key is available */
+	defaultApiKey?: string;
 	/** Whether this provider has an open/unauthenticated model endpoint that can be fetched without API key */
 	openModelEndpoint?: boolean;
 	/** Provider family identifier (optional) */
@@ -111,8 +113,10 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 	blackbox: {
 		displayName: "Blackbox AI",
 		family: "Blackbox AI",
-		description: "Blackbox AI - works without API key",
-		supportsApiKey: false,
+		description: "Blackbox AI - uses default API key",
+		supportsApiKey: true,
+		apiKeyTemplate: "xxx",
+		defaultApiKey: "xxx",
 		openModelEndpoint: true,
 		fetchModels: true,
 		modelsEndpoint: "/models",
@@ -120,7 +124,6 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 			customerId: "",
 			userId: "",
 			version: "1.1",
-
 		},
 		openai: {
 			baseUrl: "https://oi-vscode-server-985058387028.europe-west1.run.app/v1",
