@@ -18,6 +18,9 @@ All notable changes to this project will be documented in this file.
 - **Vercel AI Provider**: Added a new OpenAI-SDK-only `vercelai` provider for the Vercel AI Gateway.
   - Uses `https://ai-gateway.vercel.sh/v1` with `/models` model discovery.
   - Enables open model endpoint fetching and generated provider settings/commands.
+- **Cline Provider**: Added a new OpenAI-SDK-only `cline` provider.
+  - Uses `https://api.cline.bot/api/v1` with `/models` model discovery.
+  - Uses authenticated model fetching and respects the shared global context-length manager path.
 - **Vercel AI Context Handling**: Added a dedicated Vercel AI context resolver built on top of the global context manager.
   - Uses Vercel model metadata fields like `context_window` and `max_tokens` when available.
   - Imports model tags from the Vercel `/models` response for fetched models.

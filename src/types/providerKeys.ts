@@ -3,6 +3,7 @@ export enum ProviderKey {
 	Blackbox = 'blackbox',
 	ChatJimmy = 'chatjimmy',
 	Chutes = 'chutes',
+	Cline = 'cline',
 	Codex = 'codex',
 	Compatible = 'compatible',
 	DeepInfra = 'deepinfra',

@@ -75,6 +75,14 @@ export class AccountManager {
 			},
 		],
 		[
+			ProviderKey.Cline,
+			{
+				supportsMultiAccount: true,
+				supportsOAuth: false,
+				supportsApiKey: true,
+			},
+		],
+		[
 			ProviderKey.Codex,
 			{
 				supportsMultiAccount: true,

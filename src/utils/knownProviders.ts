@@ -145,6 +145,19 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 		description: "ChatJimmy - free public API, no auth required",
 		supportsApiKey: false,
 	},
+	cline: {
+		displayName: "Cline",
+		family: "Cline",
+		description: "Cline endpoint integration",
+		openai: { baseUrl: "https://api.cline.bot/api/v1" },
+		fetchModels: true,
+		modelsEndpoint: "/models",
+		modelParser: {
+			arrayPath: "data",
+			descriptionField: "id",
+			cooldownMinutes: 10,
+		},
+	},
 	chutes: {
 		displayName: "Chutes AI",
 		family: "Chutes AI",

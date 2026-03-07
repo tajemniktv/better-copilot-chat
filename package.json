@@ -56,6 +56,7 @@
         "onLanguageModelProvider:chp.blackbox",
         "onLanguageModelProvider:chp.chatjimmy",
         "onLanguageModelProvider:chp.chutes",
+        "onLanguageModelProvider:chp.cline",
         "onLanguageModelProvider:chp.codex",
         "onLanguageModelProvider:chp.deepinfra",
         "onLanguageModelProvider:chp.deepseek",
@@ -279,6 +280,11 @@
             {
                 "command": "chp.vercelai.setApiKey",
                 "title": "Configure Vercel AI",
+                "category": "Copilot ++"
+            },
+            {
+                "command": "chp.cline.setApiKey",
+                "title": "Configure Cline",
                 "category": "Copilot ++"
             }
         ],
@@ -558,6 +564,12 @@
                     "description": "Chutes AI base URL or proxy endpoint (optional).",
                     "scope": "application"
                 },
+                "chp.cline.baseUrl": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Cline base URL or proxy endpoint (optional).",
+                    "scope": "application"
+                },
                 "chp.codex.baseUrl": {
                     "type": "string",
                     "default": "",
@@ -814,6 +826,24 @@
                         "apiKey": {
                             "type": "string",
                             "description": "Chutes AI API key.",
+                            "secret": true
+                        },
+                        "baseUrl": {
+                            "type": "string",
+                            "description": "Custom base URL or proxy endpoint (optional). Overrides the default API endpoint.",
+                            "default": ""
+                        }
+                    }
+                }
+            },
+            {
+                "vendor": "chp.cline",
+                "displayName": "⦿ Cline (Cline endpoint integration)",
+                "configuration": {
+                    "properties": {
+                        "apiKey": {
+                            "type": "string",
+                            "description": "Cline API key.",
                             "secret": true
                         },
                         "baseUrl": {
