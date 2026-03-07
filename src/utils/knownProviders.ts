@@ -55,6 +55,7 @@ export interface KnownProviderConfig
 		nameField?: string;
 		descriptionField?: string;
 		contextLengthField?: string;
+		tagsField?: string;
 	};
 	/** OpenAI SDK compatibility configuration */
 	openai?: {
@@ -368,6 +369,8 @@ const knownProviderOverrides: Record<string, KnownProviderConfig> = {
 			arrayPath: "data",
 			filterField: "type",
 			filterValue: "language",
+			contextLengthField: "context_window",
+			tagsField: "tags",
 			descriptionField: "id",
 			cooldownMinutes: 10,
 		},

@@ -15,12 +15,24 @@ All notable changes to this project will be documented in this file.
 - **OpenCode Provider SDK Modes**: OpenCode now supports provider-level `anthropic`, `openai`, and `oai-response` SDK modes.
   - Default OpenCode SDK mode now prefers `anthropic`, similar to Ollama.
   - Synced the generated `chp.opencode.sdkMode` setting into `package.json`.
+- **Vercel AI Provider**: Added a new OpenAI-SDK-only `vercelai` provider for the Vercel AI Gateway.
+  - Uses `https://ai-gateway.vercel.sh/v1` with `/models` model discovery.
+  - Enables open model endpoint fetching and generated provider settings/commands.
+- **Vercel AI Context Handling**: Added a dedicated Vercel AI context resolver built on top of the global context manager.
+  - Uses Vercel model metadata fields like `context_window` and `max_tokens` when available.
+  - Imports model tags from the Vercel `/models` response for fetched models.
+- **Qwen 3.5 Large-Context Overrides**: Added 1M-context special handling for Qwen 3.5 Flash and Plus model variants.
+  - Covers naming variants such as `qwen3.5-flash`, `qwen3.5-plus`, `qwen3-5-flash`, and `qwen3-5-plus`.
 
 ### Fixed
 
 - **Settings Page Search**: Fixed the provider search input in the unified settings page so filtering works while typing instead of effectively resetting interaction on re-render.
 - **Settings Page Provider Controls**: Fixed Blackbox so it is no longer treated like a no-config provider and now exposes provider settings consistently.
 - **Known Provider Merge Typing**: Fixed a `knownProviders.ts` type error when applying preferred provider base URLs during config merging.
+- **Vercel AI Model Import Filtering**: Vercel AI model discovery now only imports entries where `type === "language"`.
+- **Vercel AI Vision Capability Detection**: Imported Vercel models now enable vision support when their tags include `vision`.
+- **Vercel AI Token Limit Mapping**: Vercel AI imported models now map `maxInputTokens` from `context_window - max_tokens` and `maxOutputTokens` from `max_tokens`.
+- **Dynamic Model Parser Typing**: Fixed TypeScript typing for custom model-parser filter fields used during dynamic model imports.
 
 ## [0.2.8] - 2026-03-04
 

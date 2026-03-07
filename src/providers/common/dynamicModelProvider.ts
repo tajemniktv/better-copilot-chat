@@ -13,6 +13,7 @@ import type {
 } from "vscode";
 import * as vscode from "vscode";
 import type { ModelConfig, ProviderConfig } from "../../types/sharedTypes";
+import { resolveVercelAiTokenLimits } from "../vercelai/vercelaiContextLengthManager";
 import {
 	ApiKeyManager,
 	ConfigManager,
@@ -34,7 +35,24 @@ interface FetchedModel {
 	name?: string;
 	description?: string;
 	context_length?: number;
+	context_window?: number;
+	max_tokens?: number;
+	tags?: unknown;
 	[maxOutputTokens: string]: unknown;
+}
+
+function normalizeTags(value: unknown): string[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map((tag) => String(tag).trim())
+		.filter((tag) => tag.length > 0);
+}
+
+function supportsVisionFromTags(tags: string[]): boolean {
+	return tags.some((tag) => tag.toLowerCase() === 'vision');
 }
 
 /**
@@ -224,21 +242,25 @@ export class DynamicModelProvider extends GenericModelProvider {
 			const nameField = parser.nameField || "name";
 			const descField = parser.descriptionField || "description";
 			const contextField = parser.contextLengthField || "context_length";
+			const tagsField = parser.tagsField || "tags";
 
 			const modelConfigs: ModelConfig[] = [];
 			const seenIds = new Set<string>();
 
 			for (const m of models) {
 				const modelId = String(m[idField] || m.id);
-				const contextLen = Number(m[contextField]) || 128000;
-				const { maxInputTokens, maxOutputTokens } = resolveGlobalTokenLimits(
-					modelId,
-					contextLen,
-					{
-						defaultContextLength: DEFAULT_CONTEXT_LENGTH,
-						defaultMaxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
-					},
-				);
+				const tags = normalizeTags(m[tagsField]);
+				const contextLen = Number(m[contextField]) || DEFAULT_CONTEXT_LENGTH;
+				const { maxInputTokens, maxOutputTokens } =
+					this.providerKey === "vercelai"
+						? resolveVercelAiTokenLimits(modelId, m, {
+								defaultContextLength: contextLen,
+								defaultMaxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+							})
+						: resolveGlobalTokenLimits(modelId, contextLen, {
+								defaultContextLength: DEFAULT_CONTEXT_LENGTH,
+								defaultMaxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+							});
 
 				// Clean ID for use in VS Code
 				const cleanId = modelId
@@ -257,8 +279,11 @@ export class DynamicModelProvider extends GenericModelProvider {
 					tooltip: String(m[descField] || `${modelId}`),
 					maxInputTokens,
 					maxOutputTokens,
+					tags,
 					model: modelId,
-					capabilities: resolveGlobalCapabilities(modelId, {}),
+					capabilities: resolveGlobalCapabilities(modelId, {
+						detectedImageInput: supportsVisionFromTags(tags),
+					}),
 				});
 			}
 

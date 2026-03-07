@@ -19,6 +19,8 @@ export interface ModelConfig {
         toolCalling: boolean;
         imageInput: boolean;
     };
+    /** Optional model tags imported from provider metadata */
+    tags?: string[];
     /**
      * Model family identifier (optional)
      * Used for grouping models in the model selector.

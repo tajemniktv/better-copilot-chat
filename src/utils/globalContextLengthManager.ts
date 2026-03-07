@@ -62,6 +62,11 @@ const GEMA3_MAX_INPUT_TOKENS = GEMA3_TOTAL_TOKENS - GEMA3_MAX_OUTPUT_TOKENS; // 
 // Qwen3.5 models: 256K total context (1k=1024), 32K output / 224K input
 const QWEN35_MAX_INPUT_TOKENS = 256 * 1024 - 32 * 1024; // 229376
 const QWEN35_MAX_OUTPUT_TOKENS = 32 * 1024; // 32768
+// Qwen3.5 Flash / Plus models: 1,000,000 total context, 32K output
+const QWEN35_1M_TOTAL_TOKENS = 1000000;
+const QWEN35_1M_MAX_OUTPUT_TOKENS = 32 * 1024; // 32768
+const QWEN35_1M_MAX_INPUT_TOKENS =
+	QWEN35_1M_TOTAL_TOKENS - QWEN35_1M_MAX_OUTPUT_TOKENS;
 // Gemini large-context families (1,000,000 total)
 const GEMINI_1M_TOTAL_TOKENS = 1000000;
 const GEMINI25_MAX_OUTPUT_TOKENS = 32 * 1024; // Gemini 2.5 -> 32K output (32768)
@@ -161,6 +166,12 @@ export function isQwen35Model(modelId: string): boolean {
 	return /qwen3\.5/i.test(modelId);
 }
 
+export function isQwen35OneMillionContextModel(modelId: string): boolean {
+	// Matches qwen3.5-flash / qwen3.5-plus and provider-prefixed variants,
+	// including forms like qwen3-5-flash and qwen3-5-plus.
+	return /qwen[-_]?3(?:\.|[-_])?5[-_]?(?:flash|plus)/i.test(modelId);
+}
+
 export function isClaudeModel(modelId: string): boolean {
 	// Matches all Claude models: claude-3, claude-3.5, claude-4, etc.
 	// Also matches provider-prefixed ids like anthropic/claude-3, etc.
@@ -245,6 +256,14 @@ export function resolveGlobalTokenLimits(
 			maxOutputTokens: FIXED_128K_MAX_OUTPUT_TOKENS,
 		};
 	}
+
+		// Qwen3.5 Flash / Plus: 1M total context, 32K output
+		if (isQwen35OneMillionContextModel(modelId)) {
+			return {
+				maxInputTokens: QWEN35_1M_MAX_INPUT_TOKENS,
+				maxOutputTokens: QWEN35_1M_MAX_OUTPUT_TOKENS,
+			};
+		}
 
 	// Gemini 2 family (1M total, 32K output)
 	if (isGemini2Model(modelId)) {
