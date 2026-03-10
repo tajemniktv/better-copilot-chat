@@ -13,7 +13,6 @@ export { CodexHandler } from '../providers/codex/codexHandler';
 export { MiniMaxWizard } from '../providers/minimax/minimaxWizard';
 export { MoonshotWizard } from '../providers/moonshot/moonshotWizard';
 export { OpenAIHandler } from '../providers/openai/openaiHandler';
-export { OpenAIStreamProcessor } from '../providers/openai/openaiStreamProcessor';
 export { ResponsesHandler } from '../providers/openai/responsesHandler';
 export { ZhipuWizard } from '../providers/zhipu/zhipuWizard';
 export { ApiKeyManager } from './apiKeyManager';

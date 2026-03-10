@@ -7,5 +7,13 @@
  *  Build output: dist/copilot.bundle.js
  *--------------------------------------------------------------------------------------------*/
 
-// Export complete InlineCompletionProvider
-export { InlineCompletionProvider } from "./completionProvider";
+// Export provider factory used by the lightweight shim
+export { createInlineCompletionProvider } from './completionProvider';
+export {
+    DEFAULT_FIM_PROVIDER_FACTORY_ID,
+    DEFAULT_NES_PROVIDER_FACTORY_ID,
+    listRegisteredFIMProviderFactories,
+    listRegisteredNESProviderFactories,
+    registerFIMProviderFactory,
+    registerNESProviderFactory
+} from './completionProviderRegistry';

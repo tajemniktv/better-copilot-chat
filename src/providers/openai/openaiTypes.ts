@@ -3,40 +3,47 @@
  *  Type definitions for OpenAI provider
  *--------------------------------------------------------------------------------------------*/
 
-import type OpenAI from "openai";
-import type { ProcessStreamOptions } from "../common/commonTypes";
+import type OpenAI from 'openai';
+import type { ProcessStreamOptions } from '../common/commonTypes';
 
 export type { ProcessStreamOptions };
 
 // OpenAI format types
 export interface OpenAIDelta {
-	role?: string;
-	content?: string | null;
-	tool_calls?: OpenAIToolCallDelta[];
+    role?: string;
+    content?: string | null;
+    tool_calls?: OpenAIToolCallDelta[];
+    reasoning?: string;
+    reasoning_content?: string;
 }
 
 export interface OpenAIToolCallDelta {
-	index: number;
-	id?: string;
-	type?: string;
-	function?: {
-		name?: string;
-		arguments?: string;
-	};
+    index: number;
+    id?: string;
+    type?: string;
+    function?: {
+        name?: string;
+        arguments?: string;
+    };
 }
 
 export interface OpenAIStreamChoice {
-	index: number;
-	delta: OpenAIDelta;
-	finish_reason?: string | null;
+    index: number;
+    delta: OpenAIDelta;
+    finish_reason?: string | null;
+    message?: {
+        content?: string;
+        reasoning?: string;
+        reasoning_content?: string;
+    };
 }
 
 export interface OpenAIStreamChunk {
-	id: string;
-	object: string;
-	created: number;
-	model: string;
-	choices: OpenAIStreamChoice[];
+    id: string;
+    object: string;
+    created: number;
+    model: string;
+    choices: OpenAIStreamChoice[];
 }
 
 /**
@@ -44,27 +51,27 @@ export interface OpenAIStreamChunk {
  * Note: Some providers use 'reasoning', others use 'reasoning_content'
  */
 export interface ExtendedDelta
-	extends OpenAI.Chat.ChatCompletionChunk.Choice.Delta {
-	reasoning?: string;
-	reasoning_content?: string;
+    extends OpenAI.Chat.ChatCompletionChunk.Choice.Delta {
+    reasoning?: string;
+    reasoning_content?: string;
 }
 
 /**
  * Extend Choice type to support message field compatible with old format
  */
 export interface ExtendedChoice
-	extends OpenAI.Chat.Completions.ChatCompletionChunk.Choice {
-	message?: {
-		content?: string;
-		reasoning?: string;
-		reasoning_content?: string;
-	};
+    extends OpenAI.Chat.Completions.ChatCompletionChunk.Choice {
+    message?: {
+        content?: string;
+        reasoning?: string;
+        reasoning_content?: string;
+    };
 }
 
 /**
  * Extend assistant message type to support reasoning_content field
  */
 export interface ExtendedAssistantMessageParam
-	extends OpenAI.Chat.ChatCompletionAssistantMessageParam {
-	reasoning_content?: string;
+    extends OpenAI.Chat.ChatCompletionAssistantMessageParam {
+    reasoning_content?: string;
 }
