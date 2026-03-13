@@ -4,9 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { configProviders } from "../providers/config";
 import { ModelEditor } from "../ui/modelEditor";
 import { ApiKeyManager } from "./apiKeyManager";
+import {
+	FIXED_128K_MAX_INPUT_TOKENS,
+	FIXED_128K_MAX_OUTPUT_TOKENS,
+} from "./globalContextLengthManager";
 import { KnownProviders } from "./knownProviders";
 import { Logger } from "./logger";
 
@@ -126,6 +129,23 @@ export class CompatibleModelManager {
 	/**
 	 * Load models from configuration
 	 */
+	private static normalizeLegacyTokenLimits(
+		model: CompatibleModelConfig,
+	): CompatibleModelConfig {
+		if (
+			model.maxInputTokens === 128000 &&
+			model.maxOutputTokens === 4096
+		) {
+			return {
+				...model,
+				maxInputTokens: FIXED_128K_MAX_INPUT_TOKENS,
+				maxOutputTokens: FIXED_128K_MAX_OUTPUT_TOKENS,
+			};
+		}
+
+		return model;
+	}
+
 	private static loadModels(): void {
 		try {
 			const config = vscode.workspace.getConfiguration("chp");
@@ -133,14 +153,18 @@ export class CompatibleModelManager {
 				"compatibleModels",
 				[],
 			);
-			CompatibleModelManager.models = (modelsData || []).filter(
-				(model) =>
-					model != null &&
-					typeof model === "object" &&
-					model.id &&
-					model.name &&
-					model.provider,
-			); // Filter out invalid models
+			CompatibleModelManager.models = (modelsData || [])
+				.filter(
+					(model) =>
+						model != null &&
+						typeof model === "object" &&
+						model.id &&
+						model.name &&
+						model.provider,
+				)
+				.map((model) =>
+					CompatibleModelManager.normalizeLegacyTokenLimits(model),
+				); // Filter out invalid models
 			Logger.debug(
 				`Loaded ${CompatibleModelManager.models.length} custom models`,
 			);
@@ -230,7 +254,9 @@ export class CompatibleModelManager {
 			);
 
 			// Return raw data without any processing (including not adding default tooltip)
-			return rawModel;
+			return rawModel
+				? CompatibleModelManager.normalizeLegacyTokenLimits(rawModel)
+				: undefined;
 		} catch (error) {
 			Logger.error(
 				"Failed to read raw model data from configuration file:",
@@ -771,7 +797,9 @@ export class CompatibleModelManager {
 		// Read raw data from configuration file (unprocessed)
 		const rawConfig = CompatibleModelManager.getRawModelFromConfig(modelId);
 		// If unable to read raw data, use in-memory data as fallback
-		const configToEdit = rawConfig || currentConfig;
+			const configToEdit = CompatibleModelManager.normalizeLegacyTokenLimits(
+				rawConfig || currentConfig,
+			);
 
 		// Directly display visual form editor
 		const updatedConfig =
@@ -795,8 +823,8 @@ export class CompatibleModelManager {
 			name: "", // Will be filled by user in form
 			provider: "", // Will be selected and filled by user in form
 			sdkMode: "openai",
-			maxInputTokens: 128000,
-			maxOutputTokens: 4096,
+			maxInputTokens: FIXED_128K_MAX_INPUT_TOKENS,
+			maxOutputTokens: FIXED_128K_MAX_OUTPUT_TOKENS,
 			capabilities: {
 				toolCalling: true,
 				imageInput: false,

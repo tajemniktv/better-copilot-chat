@@ -9,6 +9,7 @@ import type {
 	CancellationToken,
 	LanguageModelChatInformation,
 	LanguageModelChatMessage,
+	LanguageModelChatMessage2,
 	LanguageModelChatProvider,
 	Progress,
 	ProvideLanguageModelChatResponseOptions,
@@ -30,7 +31,19 @@ import {
 import { KnownProviders } from "../../utils/knownProviders";
 import { ProviderWizard } from "../../utils/providerWizard";
 import { getUserAgent } from "../../utils/userAgent";
+import {
+	DEFAULT_CONTEXT_LENGTH,
+	DEFAULT_MAX_OUTPUT_TOKENS,
+	resolveAdvertisedTokenLimits,
+} from "../../utils/globalContextLengthManager";
 import { MoonshotWizard } from "../moonshot/moonshotWizard";
+
+function getPositiveNumber(value: unknown): number | undefined {
+	const numericValue = Number(value);
+	return Number.isFinite(numericValue) && numericValue > 0
+		? numericValue
+		: undefined;
+}
 
 /**
  * Generic Model Provider Class
@@ -385,14 +398,31 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 					return null;
 				}
 
+				const record = m as Record<string, unknown>;
+				const contextLength =
+					getPositiveNumber(record.context_length) ??
+					getPositiveNumber(record.context_window);
+				const advertisedMaxOutputTokens =
+					getPositiveNumber(record.max_tokens) ??
+					getPositiveNumber(record.max_output_tokens);
+				const { maxInputTokens, maxOutputTokens } = resolveAdvertisedTokenLimits(
+					modelId,
+					contextLength,
+					{
+						defaultContextLength: DEFAULT_CONTEXT_LENGTH,
+						defaultMaxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+						advertisedMaxOutputTokens,
+					},
+				);
+
 				const info: LanguageModelChatInformation = {
 					id: modelId,
 					name: this.formatModelName((m[nameField] as string) || modelId),
 					detail: this.providerConfig.displayName,
 					tooltip: `${modelId} via ${this.providerConfig.displayName}`,
 					family: this.providerKey,
-					maxInputTokens: 128000, // Default, will be improved
-					maxOutputTokens: 16384,
+					maxInputTokens,
+					maxOutputTokens,
 					version: "1.0",
 					capabilities: {
 						toolCalling: true,
@@ -1083,7 +1113,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 
 	async provideTokenCount(
 		model: LanguageModelChatInformation,
-		text: string | LanguageModelChatMessage,
+		text: string | LanguageModelChatMessage | LanguageModelChatMessage2,
 		_token: CancellationToken,
 	): Promise<number> {
 		return TokenCounter.getInstance().countTokens(model, text);
@@ -1094,7 +1124,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 	 */
 	protected async countMessagesTokens(
 		model: LanguageModelChatInformation,
-		messages: Array<LanguageModelChatMessage>,
+		messages: Array<LanguageModelChatMessage | LanguageModelChatMessage2>,
 		modelConfig?: ModelConfig,
 		options?: ProvideLanguageModelChatResponseOptions,
 	): Promise<number> {

@@ -13,11 +13,16 @@ import * as vscode from "vscode";
 import {
 	type LanguageModelChatInformation,
 	type LanguageModelChatMessage,
+	type LanguageModelChatMessage2,
 	LanguageModelChatMessageRole,
 	type LanguageModelChatTool,
 	type ProvideLanguageModelChatResponseOptions,
 } from "vscode";
 import { Logger } from "./logger";
+
+type CountableLanguageModelChatMessage =
+	| LanguageModelChatMessage
+	| LanguageModelChatMessage2;
 
 /**
  * Globally shared tokenizer instance and extension path
@@ -101,7 +106,7 @@ export class TokenCounter {
 					"[TokenCounter] Extension path not initialized, please call TokenCounter.setExtensionPath() first",
 				);
 			}
-			const basePath = vscode.Uri.file(extensionPath!);
+			const basePath = vscode.Uri.file(extensionPath);
 			const tokenizerPath = vscode.Uri.joinPath(
 				basePath,
 				"dist",
@@ -160,6 +165,103 @@ export class TokenCounter {
 		}
 	}
 
+	private isToolResultPart(
+		part: unknown,
+	): part is { callId: string; content?: unknown[] } {
+		if (part instanceof vscode.LanguageModelToolResultPart) {
+			return true;
+		}
+
+		if (part instanceof vscode.LanguageModelToolResultPart2) {
+			return true;
+		}
+
+		return (
+			typeof part === "object" &&
+			part !== null &&
+			"callId" in part &&
+			typeof part.callId === "string" &&
+			(!("content" in part) || Array.isArray(part.content))
+		);
+	}
+
+	private isDataPart(part: unknown): part is vscode.LanguageModelDataPart {
+		if (part instanceof vscode.LanguageModelDataPart) {
+			return true;
+		}
+
+		return (
+			typeof part === "object" &&
+			part !== null &&
+			"mimeType" in part &&
+			typeof part.mimeType === "string" &&
+			"data" in part
+		);
+	}
+
+	private isThinkingPart(part: unknown): part is vscode.LanguageModelThinkingPart {
+		if (part instanceof vscode.LanguageModelThinkingPart) {
+			return true;
+		}
+
+		return (
+			typeof part === "object" &&
+			part !== null &&
+			"value" in part &&
+			(typeof part.value === "string" || Array.isArray(part.value))
+		);
+	}
+
+	private getPartBinaryData(part: { data: unknown }): Uint8Array | undefined {
+		const { data } = part;
+		if (data instanceof Uint8Array) {
+			return data;
+		}
+
+		if (data instanceof ArrayBuffer) {
+			return new Uint8Array(data);
+		}
+
+		if (ArrayBuffer.isView(data)) {
+			return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+		}
+
+		return undefined;
+	}
+
+	private isTextLikeMimeType(mimeType: string): boolean {
+		return (
+			mimeType.startsWith("text/") ||
+			mimeType.includes("json") ||
+			mimeType.endsWith("+json") ||
+			mimeType.endsWith("xml") ||
+			mimeType.endsWith("+xml") ||
+			mimeType === "application/javascript" ||
+			mimeType === "application/x-javascript"
+		);
+	}
+
+	private countDataPartTokens(part: vscode.LanguageModelDataPart): number {
+		const bytes = this.getPartBinaryData(part);
+		const mimeType = part.mimeType || "application/octet-stream";
+
+		if (!bytes || bytes.length === 0) {
+			return this.getTextTokenLength(mimeType);
+		}
+
+		if (this.isTextLikeMimeType(mimeType)) {
+			try {
+				return this.getTextTokenLength(new TextDecoder().decode(bytes));
+			} catch (error) {
+				Logger.trace(
+					`[Token Count] Failed to decode data part (${mimeType}), falling back to metadata only: ${error}`,
+				);
+			}
+		}
+
+		return this.getTextTokenLength(`${mimeType}:${bytes.length}`);
+	}
+
 	private async countMessagePartTokens(part: unknown): Promise<number> {
 		if (!part) {
 			return 0;
@@ -174,11 +276,15 @@ export class TokenCounter {
 			return this.getTextTokenLength(payload);
 		}
 
-		if (part instanceof vscode.LanguageModelToolResultPart) {
+		if (this.isToolResultPart(part)) {
 			let combined = part.callId || "";
 			for (const resultPart of part.content || []) {
 				if (resultPart instanceof vscode.LanguageModelTextPart) {
 					combined += `\n${resultPart.value}`;
+				} else if (resultPart instanceof vscode.LanguageModelPromptTsxPart) {
+					combined += `\n${this.stringifyUnknown(resultPart.value)}`;
+				} else if (this.isDataPart(resultPart)) {
+					combined += `\n${this.stringifyUnknown(resultPart.mimeType)}`;
 				} else {
 					combined += `\n${this.stringifyUnknown(resultPart)}`;
 				}
@@ -186,8 +292,19 @@ export class TokenCounter {
 			return this.getTextTokenLength(combined);
 		}
 
+		if (this.isDataPart(part)) {
+			return this.countDataPartTokens(part);
+		}
+
 		if (part instanceof vscode.LanguageModelPromptTsxPart) {
 			return this.getTextTokenLength(this.stringifyUnknown(part.value));
+		}
+
+		if (this.isThinkingPart(part)) {
+			const value = Array.isArray(part.value)
+				? part.value.join("\n")
+				: part.value;
+			return this.getTextTokenLength(value || "");
 		}
 
 		if (
@@ -206,7 +323,7 @@ export class TokenCounter {
 	}
 
 	private async countLanguageModelMessageTokens(
-		message: LanguageModelChatMessage,
+		message: CountableLanguageModelChatMessage,
 	): Promise<number> {
 		let numTokens = 3;
 		numTokens += this.getTextTokenLength(String(message.role));
@@ -234,7 +351,7 @@ export class TokenCounter {
 	 */
 	async countTokens(
 		_model: LanguageModelChatInformation,
-		text: string | LanguageModelChatMessage,
+		text: string | CountableLanguageModelChatMessage,
 	): Promise<number> {
 		if (typeof text === "string") {
 			const stringTokens = this.tokenizer?.encode(text)?.length ?? 0;
@@ -338,7 +455,7 @@ export class TokenCounter {
 	 */
 	async countMessagesTokens(
 		model: LanguageModelChatInformation,
-		messages: Array<LanguageModelChatMessage>,
+		messages: Array<CountableLanguageModelChatMessage>,
 		modelConfig?: { sdkMode?: string },
 		options?: ProvideLanguageModelChatResponseOptions,
 	): Promise<number> {
@@ -349,10 +466,7 @@ export class TokenCounter {
 		// eslint-disable-next-line @typescript-eslint/prefer-for-of
 		for (let i = 0; i < messages.length; i++) {
 			const message = messages[i];
-			const messageTokens = await this.countTokens(
-				model,
-				message as unknown as string | LanguageModelChatMessage,
-			);
+			const messageTokens = await this.countTokens(model, message);
 			totalTokens += messageTokens;
 			// Logger.trace(`[Token Count] Message #${i + 1}: ${messageTokens} tokens (Cumulative: ${totalTokens})`);
 		}
@@ -362,7 +476,7 @@ export class TokenCounter {
 		if (sdkMode === "anthropic") {
 			// Add system message and tool token costs for Anthropic SDK mode
 			// Calculate system message token cost
-			const systemMessageTokens = this.countSystemMessageTokens(messages);
+			const systemMessageTokens = await this.countSystemMessageTokens(messages);
 			if (systemMessageTokens > 0) {
 				totalTokens += systemMessageTokens;
 				// Logger.trace(`[Token Count] System message: ${systemMessageTokens} tokens (Cumulative: ${totalTokens})`);
@@ -397,38 +511,30 @@ export class TokenCounter {
 	 * Calculate system message token count
 	 * Extract all system messages from the message list and calculate combined
 	 */
-	private countSystemMessageTokens(
-		messages: Array<LanguageModelChatMessage>,
-	): number {
-		let systemText = "";
+	private async countSystemMessageTokens(
+		messages: Array<CountableLanguageModelChatMessage>,
+	): Promise<number> {
+		let systemTokens = 0;
 
 		for (const message of messages) {
 			if (message.role === LanguageModelChatMessageRole.System) {
 				if (typeof message.content === "string") {
-					systemText += message.content;
+					systemTokens += this.getTextTokenLength(message.content);
 				} else if (Array.isArray(message.content)) {
-					systemText += message.content
-						.map((part) => {
-							if (part instanceof vscode.LanguageModelTextPart) {
-								return part.value;
-							}
-							if (part instanceof vscode.LanguageModelPromptTsxPart) {
-								return this.stringifyUnknown(part.value);
-							}
-							return this.stringifyUnknown(part);
-						})
-						.filter(Boolean)
-						.join("\n");
+					for (const part of message.content) {
+						systemTokens += await this.countMessagePartTokens(part);
+					}
+				} else {
+					systemTokens += this.getTextTokenLength(
+						this.stringifyUnknown(message.content),
+					);
 				}
 			}
 		}
 
-		if (!systemText) {
+		if (systemTokens === 0) {
 			return 0;
 		}
-
-		// Calculate system message token count - using cache mechanism
-		const systemTokens = this.getTextTokenLength(systemText);
 
 		// Anthropic's system message processing adds some extra formatting tokens
 		// Based on testing, system message wrapping overhead is about 25-30 tokens

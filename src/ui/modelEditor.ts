@@ -6,6 +6,10 @@
 import * as vscode from "vscode";
 import { configProviders } from "../providers/config";
 import type { CompatibleModelConfig } from "../utils/compatibleModelManager";
+import {
+	FIXED_128K_MAX_INPUT_TOKENS,
+	FIXED_128K_MAX_OUTPUT_TOKENS,
+} from "../utils/globalContextLengthManager";
 import { KnownProviders } from "../utils/knownProviders";
 import modelEditorCss from "./modelEditor.css?raw";
 import modelEditorJs from "./modelEditor.js?raw";
@@ -146,8 +150,10 @@ export class ModelEditor {
 			tooltip: model?.tooltip || "",
 			baseUrl: model?.baseUrl || "",
 			model: model?.model || "",
-			maxInputTokens: model?.maxInputTokens || 128000,
-			maxOutputTokens: model?.maxOutputTokens || 4096,
+			maxInputTokens:
+				model?.maxInputTokens || FIXED_128K_MAX_INPUT_TOKENS,
+			maxOutputTokens:
+				model?.maxOutputTokens || FIXED_128K_MAX_OUTPUT_TOKENS,
 			toolCalling: model?.capabilities?.toolCalling || false,
 			imageInput: model?.capabilities?.imageInput || false,
 			outputThinking: model?.outputThinking !== false,

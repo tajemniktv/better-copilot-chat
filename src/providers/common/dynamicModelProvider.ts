@@ -8,8 +8,6 @@ import * as path from "node:path";
 import type {
 	CancellationToken,
 	LanguageModelChatInformation,
-	LanguageModelResponsePart,
-	Progress,
 } from "vscode";
 import * as vscode from "vscode";
 import type { ModelConfig, ProviderConfig } from "../../types/sharedTypes";
@@ -23,8 +21,8 @@ import {
 import {
 	DEFAULT_CONTEXT_LENGTH,
 	DEFAULT_MAX_OUTPUT_TOKENS,
+	resolveAdvertisedTokenLimits,
 	resolveGlobalCapabilities,
-	resolveGlobalTokenLimits,
 } from "../../utils/globalContextLengthManager";
 import type { KnownProviderConfig } from "../../utils/knownProviders";
 import { ProviderWizard } from "../../utils/providerWizard";
@@ -53,6 +51,13 @@ function normalizeTags(value: unknown): string[] {
 
 function supportsVisionFromTags(tags: string[]): boolean {
 	return tags.some((tag) => tag.toLowerCase() === 'vision');
+}
+
+function getPositiveNumber(value: unknown): number | undefined {
+	const numericValue = Number(value);
+	return Number.isFinite(numericValue) && numericValue > 0
+		? numericValue
+		: undefined;
 }
 
 /**
@@ -250,16 +255,22 @@ export class DynamicModelProvider extends GenericModelProvider {
 			for (const m of models) {
 				const modelId = String(m[idField] || m.id);
 				const tags = normalizeTags(m[tagsField]);
-				const contextLen = Number(m[contextField]) || DEFAULT_CONTEXT_LENGTH;
+					const contextLen =
+						getPositiveNumber(m[contextField]) ??
+						getPositiveNumber(m.context_window) ??
+						getPositiveNumber(m.context_length);
+					const advertisedMaxOutputTokens = getPositiveNumber(m.max_tokens);
 				const { maxInputTokens, maxOutputTokens } =
 					this.providerKey === "vercelai"
 						? resolveVercelAiTokenLimits(modelId, m, {
-								defaultContextLength: contextLen,
-								defaultMaxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
-							})
-						: resolveGlobalTokenLimits(modelId, contextLen, {
+									defaultContextLength:
+										contextLen ?? DEFAULT_CONTEXT_LENGTH,
+									defaultMaxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+								})
+							: resolveAdvertisedTokenLimits(modelId, contextLen, {
 								defaultContextLength: DEFAULT_CONTEXT_LENGTH,
 								defaultMaxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+									advertisedMaxOutputTokens,
 							});
 
 				// Clean ID for use in VS Code

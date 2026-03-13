@@ -16,10 +16,10 @@ import { TokenCounter } from '../../utils/tokenCounter';
 import { TokenTelemetryTracker } from '../../utils/tokenTelemetryTracker';
 import { getUserAgent } from '../../utils/userAgent';
 import type {
-    ExtendedAssistantMessageParam,
     ExtendedChoice,
     ExtendedDelta
 } from './openaiTypes';
+import { tryNormalizePythonStyleCompletionChunk } from './openaiSseNormalizer';
 
 /**
  * OpenAI SDK Handler
@@ -393,7 +393,49 @@ export class OpenAIHandler {
                                             `data: ${newJson}`
                                         );
                                     }
-                                } catch {}
+                                } catch {
+                                    const normalizedObj =
+                                        tryNormalizePythonStyleCompletionChunk(
+                                            jsonStr,
+                                            lastChunkId,
+                                            lastModel
+                                        );
+
+                                    if (normalizedObj) {
+                                        if (
+                                            typeof normalizedObj.id === 'string'
+                                        ) {
+                                            lastChunkId = normalizedObj.id;
+                                        }
+                                        if (
+                                            typeof normalizedObj.model ===
+                                            'string'
+                                        ) {
+                                            lastModel = normalizedObj.model;
+                                        }
+
+                                        const choices = normalizedObj.choices;
+                                        if (Array.isArray(choices)) {
+                                            for (const choice of choices) {
+                                                if (
+                                                    typeof choice?.index ===
+                                                        'number' &&
+                                                    choice.finish_reason
+                                                ) {
+                                                    seenFinishReason.set(
+                                                        choice.index,
+                                                        true
+                                                    );
+                                                }
+                                            }
+                                        }
+
+                                        transformed = transformed.replace(
+                                            m[0],
+                                            `data: ${JSON.stringify(normalizedObj)}`
+                                        );
+                                    }
+                                }
                             }
                             chunk = transformed;
                         } catch {

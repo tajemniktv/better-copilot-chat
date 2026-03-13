@@ -409,6 +409,43 @@ export function resolveGlobalTokenLimits(
 	};
 }
 
+export function resolveAdvertisedTokenLimits(
+	modelId: string,
+	advertisedContextLength: number | undefined,
+	options: ResolveTokenLimitsOptions & {
+		advertisedMaxOutputTokens?: number;
+	},
+): { maxInputTokens: number; maxOutputTokens: number } {
+	const resolvedLimits = resolveGlobalTokenLimits(
+		modelId,
+		advertisedContextLength ?? options.defaultContextLength,
+		options,
+	);
+
+	const advertisedMaxOutputTokens =
+		typeof options.advertisedMaxOutputTokens === "number" &&
+		Number.isFinite(options.advertisedMaxOutputTokens) &&
+		options.advertisedMaxOutputTokens > 0
+			? Math.floor(options.advertisedMaxOutputTokens)
+			: undefined;
+
+	if (advertisedMaxOutputTokens === undefined) {
+		return resolvedLimits;
+	}
+
+	const totalContextTokens =
+		resolvedLimits.maxInputTokens + resolvedLimits.maxOutputTokens;
+	const boundedMaxOutputTokens = Math.min(
+		advertisedMaxOutputTokens,
+		Math.max(1, totalContextTokens - 1),
+	);
+
+	return {
+		maxInputTokens: Math.max(1, totalContextTokens - boundedMaxOutputTokens),
+		maxOutputTokens: boundedMaxOutputTokens,
+	};
+}
+
 export interface ResolveCapabilitiesOptions {
 	detectedToolCalling?: boolean;
 	detectedImageInput?: boolean;

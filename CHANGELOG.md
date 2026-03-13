@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - Unreleased
+
+### Fixed
+
+- **Copilot Chat Context Window Token Counting**: Improved token counting for VS Code Copilot Chat so the Context Window panel can render usage more accurately for custom models.
+  - Extended the shared token counter to support newer VS Code language-model message/content shapes such as `LanguageModelChatMessage2`, `LanguageModelToolResultPart2`, `LanguageModelDataPart`, and thinking parts.
+  - Updated generic provider token-count handling so VS Code can request counts using the newer chat message API types.
+  - Improved counting for structured tool result content and text-like data payloads used in modern chat requests.
+
 ## [0.2.9] - 2026-03-10
 
 ### Changed
