@@ -5,12 +5,20 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import * as crypto from "node:crypto";
+import * as vscode from "vscode";
+import { window, env } from "vscode";
 import { Logger } from "../../utils/logger";
 import { getUserAgent } from "../../utils/userAgent";
 import {
 	QWEN_DEFAULT_BASE_URL,
 	QWEN_OAUTH_CLIENT_ID,
+	QWEN_OAUTH_DEVICE_CODE_ENDPOINT,
+	QWEN_OAUTH_DEVICE_GRANT_TYPE,
+	QWEN_OAUTH_SCOPE,
 	QWEN_OAUTH_TOKEN_ENDPOINT,
+	QWEN_OAUTH_VERIFICATION_CLIENT_PARAM,
+	type QwenDeviceCodeResponse,
 	type QwenOAuthCredentials,
 	type QwenTokenResponse,
 	TOKEN_REFRESH_BUFFER_MS,
@@ -18,6 +26,9 @@ import {
 
 const ACCOUNT_STORE_VERSION = 1;
 const DEFAULT_QUOTA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const DEVICE_CODE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const DEVICE_POLL_INTERVAL_MS = 5000;
+const MAX_POLL_FAILURES = 3;
 
 type QwenOAuthAccount = {
 	id: string;
@@ -751,5 +762,333 @@ export class QwenOAuthManager {
 			requireHealthy: true,
 			preferredAccountId: next.id,
 		});
+	}
+
+	// ============= OAuth Device Flow (PKCE) Methods =============
+
+	/**
+	 * Generate PKCE code verifier and challenge
+	 */
+	private async createPKCE(): Promise<{
+		verifier: string;
+		challenge: string;
+		method: string;
+	}> {
+		const verifier = crypto.randomBytes(32).toString("base64url");
+		const challenge = crypto
+			.createHash("sha256")
+			.update(verifier)
+			.digest("base64url");
+		return {
+			verifier,
+			challenge,
+			method: "S256",
+		};
+	}
+
+	/**
+	 * Request device code from OAuth server
+	 */
+	private async requestDeviceCode(pkce: {
+		verifier: string;
+		challenge: string;
+		method: string;
+	}): Promise<QwenDeviceCodeResponse | null> {
+		try {
+			const params = new URLSearchParams();
+			params.set("client_id", QWEN_OAUTH_CLIENT_ID);
+			params.set("scope", QWEN_OAUTH_SCOPE);
+			params.set("code_challenge", pkce.challenge);
+			params.set("code_challenge_method", pkce.method);
+			params.set("redirect_uri", "http://localhost:7890/callback");
+			params.set("state", crypto.randomBytes(16).toString("hex"));
+			params.set("verification_uri", "https://qwen.io/auth/device");
+			params.set("verification_uri_complete", "https://qwen.io/auth/device");
+			// Add the client param
+			params.set("client", "qwen-code");
+
+			const response = await fetch(QWEN_OAUTH_DEVICE_CODE_ENDPOINT, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+					Accept: "application/json",
+					"User-Agent": getUserAgent(),
+				},
+				body: params.toString(),
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				Logger.warn(`[qwencli] Device code request failed: ${response.status} - ${errorText}`);
+				return null;
+			}
+
+			const data = (await response.json()) as QwenDeviceCodeResponse;
+			Logger.debug("[qwencli] Device code received", { user_code: data.user_code });
+			return data;
+		} catch (error) {
+			Logger.warn("[qwencli] Device code request error", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Poll for token after device code authorization
+	 */
+	private async pollForToken(
+		deviceCode: string,
+		pkceVerifier: string,
+	): Promise<{
+		type: "success" | "pending" | "slow_down" | "failed" | "denied" | "expired";
+		access?: string;
+		refresh?: string;
+		expires?: number;
+		resourceUrl?: string;
+		error?: string;
+		description?: string;
+		fatal?: boolean;
+		status?: number;
+	}> {
+		try {
+			const params = new URLSearchParams();
+			params.set("grant_type", QWEN_OAUTH_DEVICE_GRANT_TYPE);
+			params.set("device_code", deviceCode);
+			params.set("client_id", QWEN_OAUTH_CLIENT_ID);
+			params.set("code_verifier", pkceVerifier);
+			params.set("verification_uri", "https://qwen.io/auth/device");
+
+			const response = await fetch(QWEN_OAUTH_TOKEN_ENDPOINT, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+					Accept: "application/json",
+					"User-Agent": getUserAgent(),
+				},
+				body: params.toString(),
+			});
+
+			const data = (await response.json()) as QwenTokenResponse & {
+				error?: string;
+				error_description?: string;
+			};
+
+			// Handle OAuth errors
+			if (data.error) {
+				const errorCode = data.error.toLowerCase();
+				switch (errorCode) {
+					case "authorization_pending":
+						return { type: "pending" };
+					case "slow_down":
+						return { type: "slow_down" };
+					case "access_denied":
+						return {
+							type: "denied",
+							error: errorCode,
+							description: data.error_description,
+							fatal: true,
+						};
+					case "expired_token":
+						return {
+							type: "expired",
+							error: errorCode,
+							description: data.error_description,
+							fatal: true,
+						};
+					case "invalid_grant":
+					case "invalid_client":
+					default:
+						return {
+							type: "failed",
+							error: errorCode,
+							description: data.error_description,
+							fatal: true,
+							status: response.status,
+						};
+				}
+			}
+
+			if (!response.ok) {
+				return {
+					type: "failed",
+					error: "http_error",
+					description: `HTTP ${response.status}`,
+					status: response.status,
+				};
+			}
+
+			return {
+				type: "success",
+				access: data.access_token,
+				refresh: data.refresh_token,
+				expires: Date.now() + data.expires_in * 1000,
+				resourceUrl: data.resource_url,
+			};
+		} catch (error) {
+			Logger.warn("[qwencli] Token polling error", error);
+			return {
+				type: "failed",
+				error: "network_error",
+				description: error instanceof Error ? error.message : String(error),
+			};
+		}
+	}
+
+	/**
+	 * Start OAuth device flow and guide user through login
+	 * @returns OAuth credentials if successful, null if failed/cancelled
+	 */
+	async startOAuthFlow(): Promise<QwenOAuthCredentials | null> {
+		try {
+			// Show informational message
+			await window.showInformationMessage(
+				"Starting Qwen OAuth login... A browser window will open for authentication.",
+				"OK",
+			);
+
+			// Generate PKCE
+			const pkce = await this.createPKCE();
+
+			// Request device code
+			const deviceAuth = await this.requestDeviceCode(pkce);
+			if (!deviceAuth) {
+				void window.showErrorMessage("Failed to request device code. Please try again.");
+				return null;
+			}
+
+			// Show user code and verification URL
+			const message = `Please visit: ${deviceAuth.verification_uri}\n\nEnter code: ${deviceAuth.user_code}\n\nThen click Continue in the browser.`;
+			void window.showInformationMessage(message, "Open Browser", "Copy Code");
+
+			// Open verification URL in browser
+			const verificationUrl = deviceAuth.verification_uri_complete || deviceAuth.verification_uri;
+			Logger.info("[qwencli] Verification URL", { url: verificationUrl });
+
+			try {
+				await env.openExternal(vscode.Uri.parse(verificationUrl));
+			} catch (openError) {
+				Logger.warn("[qwencli] Failed to open browser automatically", openError);
+				// User will need to manually open the URL
+			}
+
+			// Poll for token
+			const pollStart = Date.now();
+			const expiresIn = deviceAuth.expires_in * 1000;
+			let pollInterval = (deviceAuth.interval || 5) * 1000;
+			const maxInterval = 30 * 1000; // Cap at 30 seconds
+			let consecutiveFailures = 0;
+
+			while (Date.now() - pollStart < expiresIn) {
+				// Wait before polling
+				await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+				const result = await this.pollForToken(deviceAuth.device_code, pkce.verifier);
+
+				if (result.type === "success" && result.access) {
+					const credentials: QwenOAuthCredentials = {
+						access_token: result.access,
+						refresh_token: result.refresh || "",
+						token_type: "Bearer",
+						expiry_date: result.expires || Date.now() + 3600 * 1000,
+						resource_url: result.resourceUrl,
+					};
+
+					void window.showInformationMessage("Qwen OAuth login successful!");
+					Logger.info("[qwencli] OAuth flow completed successfully");
+					return credentials;
+				}
+
+				if (result.type === "slow_down") {
+					consecutiveFailures = 0;
+					pollInterval = Math.min(pollInterval + 5000, maxInterval);
+					continue;
+				}
+
+				if (result.type === "pending") {
+					consecutiveFailures = 0;
+					continue;
+				}
+
+				if (result.type === "failed") {
+					if (result.fatal) {
+						Logger.error("[qwencli] OAuth token polling failed with fatal error", {
+							status: result.status,
+							error: result.error,
+							description: result.description,
+						});
+						void window.showErrorMessage(
+							`OAuth failed: ${result.description || result.error}`
+						);
+						return null;
+					}
+
+					consecutiveFailures++;
+					Logger.warn(
+						`[qwencli] OAuth token polling failed (${consecutiveFailures}/${MAX_POLL_FAILURES})`
+					);
+
+					if (consecutiveFailures >= MAX_POLL_FAILURES) {
+						void window.showErrorMessage("OAuth login timed out. Please try again.");
+						return null;
+					}
+					continue;
+				}
+
+				if (result.type === "denied") {
+					void window.showErrorMessage("Authorization was denied. Please try again.");
+					return null;
+				}
+
+				if (result.type === "expired") {
+					void window.showErrorMessage("Authorization code expired. Please try again.");
+					return null;
+				}
+			}
+
+			void window.showErrorMessage("OAuth login timed out. Please try again.");
+			return null;
+		} catch (error) {
+			Logger.error("[qwencli] OAuth flow error", error);
+			void window.showErrorMessage(
+				`OAuth login failed: ${error instanceof Error ? error.message : "Unknown error"}`
+			);
+			return null;
+		}
+	}
+
+	/**
+	 * Add a new OAuth account (for multi-account support)
+	 */
+	async addOAuthAccount(credentials: QwenOAuthCredentials): Promise<{
+		accountId: string;
+		healthyAccountCount: number;
+		totalAccountCount: number;
+	} | null> {
+		const store = this.loadAccountStore();
+		const now = Date.now();
+		const newId = this.createAccountId();
+
+		store.accounts.push({
+			id: newId,
+			accountKey: this.deriveAccountKey(credentials),
+			token: credentials,
+			resource_url: credentials.resource_url,
+			exhaustedUntil: 0,
+			createdAt: now,
+			updatedAt: now,
+		});
+
+		// Set new account as active
+		store.activeAccountId = newId;
+		this.saveAccountStore(store);
+
+		// Save credentials to file
+		this.saveCredentials(credentials);
+		this.credentials = credentials;
+
+		return {
+			accountId: newId,
+			healthyAccountCount: this.countHealthyAccounts(store),
+			totalAccountCount: store.accounts.length,
+		};
 	}
 }

@@ -100,6 +100,8 @@ export class QwenCliProvider
 		const userAgent = getUserAgent();
 		return {
 			...modelConfig,
+			// Set apiKey so OpenAI handler uses it directly
+			apiKey: accessToken,
 			baseUrl: baseUrl || modelConfig.baseUrl || undefined,
 			maxOutputTokens:
 				typeof outputCap === "number"
@@ -111,7 +113,6 @@ export class QwenCliProvider
 				...QWEN_DASHSCOPE_HEADERS,
 				"X-DashScope-UserAgent": userAgent,
 				"User-Agent": userAgent,
-				Authorization: `Bearer ${accessToken}`,
 			},
 		};
 	}
@@ -125,7 +126,9 @@ export class QwenCliProvider
 			message.includes(" 401") ||
 			message.includes("status:401") ||
 			message.includes("\"code\":401") ||
-			message.includes("unauthorized")
+			message.includes("unauthorized") ||
+			message.includes("invalid_api_key") ||
+			message.includes("incorrect api key")
 		);
 	}
 
@@ -156,49 +159,82 @@ export class QwenCliProvider
 		const loginCommand = vscode.commands.registerCommand(
 			`chp.${providerKey}.login`,
 			async () => {
+				const oauthManager = QwenOAuthManager.getInstance();
+				
+				// Check if credentials already exist
 				try {
-					const { accessToken, baseURL, totalAccountCount } =
-						await QwenOAuthManager.getInstance().ensureAuthenticated(true);
-					vscode.window.showInformationMessage(
-						`${providerConfig.displayName} login successful! (${totalAccountCount} account${totalAccountCount === 1 ? "" : "s"})`,
-					);
-					// Register CLI-managed account in AccountManager if not present
+					const existing = await oauthManager.getActiveOAuthAccount({ allowExhausted: true });
+					if (existing?.accessToken) {
+						// Credentials exist, refresh and confirm
+						const { accessToken, baseURL, totalAccountCount } =
+							await oauthManager.ensureAuthenticated(true);
+						vscode.window.showInformationMessage(
+							`${providerConfig.displayName} already logged in! (${totalAccountCount} account${totalAccountCount === 1 ? "" : "s"})`,
+						);
+						await provider.modelInfoCache?.invalidateCache(providerKey);
+						provider._onDidChangeLanguageModelChatInformation.fire();
+						return;
+					}
+				} catch (checkError) {
+					// No credentials, continue with OAuth flow
+					Logger.debug("[qwencli] No existing credentials, starting OAuth flow");
+				}
+
+				// Start OAuth device flow
+				try {
+					const credentials = await oauthManager.startOAuthFlow();
+					if (credentials) {
+						const result = await oauthManager.addOAuthAccount(credentials);
+						vscode.window.showInformationMessage(
+							`${providerConfig.displayName} login successful! (${result?.totalAccountCount || 1} account${(result?.totalAccountCount || 1) === 1 ? "" : "s"})`,
+						);
+						await provider.modelInfoCache?.invalidateCache(providerKey);
+						provider._onDidChangeLanguageModelChatInformation.fire();
+					}
+				} catch (error) {
+					// Fallback to legacy CLI authentication
+					Logger.warn("[qwencli] OAuth flow failed, trying legacy CLI", error);
 					try {
-						const accountManager = AccountManager.getInstance();
-						const existing = accountManager
-							.getAccountsByProvider("qwencli")
-							.find((a) => a.metadata?.source === "cli");
-						if (!existing) {
-							await accountManager.addOAuthAccount(
-								"qwencli",
-								"Qwen CLI (Local)",
-								"",
-								{
-									accessToken: accessToken ?? "",
-									refreshToken: "",
-									expiresAt: "",
-									tokenType: "",
-								},
-								{ source: "cli", baseURL },
-							);
-						}
-					} catch (e) {
-						Logger.warn(
-							"[qwencli] Failed to register CLI account with AccountManager",
-							e,
+						const { accessToken, baseURL, totalAccountCount } =
+							await oauthManager.ensureAuthenticated(true);
+						vscode.window.showInformationMessage(
+							`${providerConfig.displayName} login successful! (${totalAccountCount} account${totalAccountCount === 1 ? "" : "s"})`,
+						);
+						await provider.modelInfoCache?.invalidateCache(providerKey);
+						provider._onDidChangeLanguageModelChatInformation.fire();
+					} catch (fallbackError) {
+						vscode.window.showErrorMessage(
+							`${providerConfig.displayName} login failed: ${fallbackError instanceof Error ? fallbackError.message : "Unknown error"}`,
 						);
 					}
-					await provider.modelInfoCache?.invalidateCache(providerKey);
-					provider._onDidChangeLanguageModelChatInformation.fire();
+				}
+			},
+		);
+
+		// Add command to add additional account
+		const addAccountCommand = vscode.commands.registerCommand(
+			`chp.${providerKey}.addAccount`,
+			async () => {
+				const oauthManager = QwenOAuthManager.getInstance();
+				try {
+					const credentials = await oauthManager.startOAuthFlow();
+					if (credentials) {
+						const result = await oauthManager.addOAuthAccount(credentials);
+						vscode.window.showInformationMessage(
+							`Added new Qwen account! Total: ${result?.totalAccountCount || "?"} account(s)`,
+						);
+						await provider.modelInfoCache?.invalidateCache(providerKey);
+						provider._onDidChangeLanguageModelChatInformation.fire();
+					}
 				} catch (error) {
 					vscode.window.showErrorMessage(
-						`${providerConfig.displayName} login failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+						`Failed to add account: ${error instanceof Error ? error.message : "Unknown error"}`,
 					);
 				}
 			},
 		);
 
-		const disposables = [providerDisposable, loginCommand];
+		const disposables = [providerDisposable, loginCommand, addAccountCommand];
 		for (const disposable of disposables) {
 			context.subscriptions.push(disposable);
 		}

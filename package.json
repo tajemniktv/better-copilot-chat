@@ -214,6 +214,16 @@
                 "category": "Copilot ++"
             },
             {
+                "command": "chp.qwencli.login",
+                "title": "Qwen Code Login (OAuth)",
+                "category": "Copilot ++"
+            },
+            {
+                "command": "chp.qwencli.addAccount",
+                "title": "Qwen Code Add Account",
+                "category": "Copilot ++"
+            },
+            {
                 "command": "chp.nesCompletion.toggleManual",
                 "title": "Toggle NES Manual Trigger Mode",
                 "category": "Copilot ++"
