@@ -53,6 +53,7 @@
         "onLanguageModelTool:chp_zhipuWebSearch",
         "onStartupFinished",
         "onLanguageModelProvider:chp.aihubmix",
+        "onLanguageModelProvider:chp.ava-supernova",
         "onLanguageModelProvider:chp.blackbox",
         "onLanguageModelProvider:chp.chatjimmy",
         "onLanguageModelProvider:chp.chutes",
@@ -62,6 +63,7 @@
         "onLanguageModelProvider:chp.deepseek",
         "onLanguageModelProvider:chp.huggingface",
         "onLanguageModelProvider:chp.kilo",
+        "onLanguageModelProvider:chp.knox",
         "onLanguageModelProvider:chp.lightningai",
         "onLanguageModelProvider:chp.minimax",
         "onLanguageModelProvider:chp.mistral",
@@ -71,6 +73,7 @@
         "onLanguageModelProvider:chp.nvidia",
         "onLanguageModelProvider:chp.ollama",
         "onLanguageModelProvider:chp.opencode",
+        "onLanguageModelProvider:chp.opencodego",
         "onLanguageModelProvider:chp.pollinations",
         "onLanguageModelProvider:chp.qwencli",
         "onLanguageModelProvider:chp.vercelai",
@@ -302,6 +305,21 @@
                 "command": "chp.pollinations.setApiKey",
                 "title": "Configure Pollinations AI",
                 "category": "Copilot ++"
+            },
+            {
+                "command": "chp.opencodego.setApiKey",
+                "title": "Configure OpenCode Zen Go",
+                "category": "Copilot ++"
+            },
+            {
+                "command": "chp.ava-supernova.setApiKey",
+                "title": "Configure AVA Supernova",
+                "category": "Copilot ++"
+            },
+            {
+                "command": "chp.knox.setApiKey",
+                "title": "Configure Knox",
+                "category": "Copilot ++"
             }
         ],
         "configuration": {
@@ -351,6 +369,12 @@
                     "type": "boolean",
                     "default": true,
                     "description": "When enabled, records and automatically restores the last used extension-provided model. (VSCode 1.106.0 will reset to default optimal model [e.g., Claude Sonnet 4.5])",
+                    "scope": "application"
+                },
+                "chp.hideThinkingInUI": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Completely hide model thinking/reasoning output in chat UI across all providers.",
                     "scope": "application"
                 },
                 "chp.zhipu.search.enableMCP": {
@@ -636,6 +660,16 @@
                     "default": "anthropic",
                     "description": "Select SDK compatibility mode for OpenCode.",
                     "scope": "application"
+                },
+                "chp.opencodego.sdkMode": {
+                    "type": "string",
+                    "enum": [
+                        "openai",
+                        "anthropic"
+                    ],
+                    "default": "anthropic",
+                    "description": "Select SDK compatibility mode for OpenCode Zen Go.",
+                    "scope": "application"
                 }
             }
         },
@@ -657,6 +691,13 @@
                             "secret": true
                         }
                     }
+                }
+            },
+            {
+                "vendor": "chp.ava-supernova",
+                "displayName": "⦿ AVA Supernova (AVA Supernova - free public API, no auth required)",
+                "configuration": {
+                    "properties": {}
                 }
             },
             {
@@ -765,6 +806,19 @@
                         "apiKey": {
                             "type": "string",
                             "description": "Kilo AI API key.",
+                            "secret": true
+                        }
+                    }
+                }
+            },
+            {
+                "vendor": "chp.knox",
+                "displayName": "⦿ Knox (Knox Chat - OpenAI SDK compatible endpoint)",
+                "configuration": {
+                    "properties": {
+                        "apiKey": {
+                            "type": "string",
+                            "description": "Knox API key.",
                             "secret": true
                         }
                     }
@@ -882,6 +936,19 @@
                         "apiKey": {
                             "type": "string",
                             "description": "OpenCode API key.",
+                            "secret": true
+                        }
+                    }
+                }
+            },
+            {
+                "vendor": "chp.opencodego",
+                "displayName": "⦿ OpenCode Zen Go (OpenCode Zen Go endpoint integration)",
+                "configuration": {
+                    "properties": {
+                        "apiKey": {
+                            "type": "string",
+                            "description": "OpenCode Zen Go API key.",
                             "secret": true
                         }
                     }

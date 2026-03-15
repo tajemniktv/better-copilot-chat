@@ -762,6 +762,21 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 		progress: Progress<vscode.LanguageModelResponsePart>,
 		token: CancellationToken,
 	): Promise<void> {
+		const hideThinkingInUI = ConfigManager.getHideThinkingInUI();
+		const effectiveProgress: Progress<vscode.LanguageModelResponsePart2> =
+			hideThinkingInUI
+				? {
+						report: (part) => {
+							if (part instanceof vscode.LanguageModelThinkingPart) {
+								return;
+							}
+							(progress as Progress<vscode.LanguageModelResponsePart2>).report(
+								part,
+							);
+						},
+					}
+				: (progress as Progress<vscode.LanguageModelResponsePart2>);
+
 		// Save user's selected model and its provider (only if memory is enabled)
 		const rememberLastModel = ConfigManager.getRememberLastModel();
 		if (rememberLastModel) {
@@ -816,7 +831,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 						modelConfig,
 						messages,
 						options,
-						progress,
+						effectiveProgress,
 						token,
 					);
 				} else if (sdkMode === "oai-response") {
@@ -825,7 +840,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 						modelConfig,
 						messages,
 						options,
-						progress,
+						effectiveProgress,
 						token,
 					);
 				} else {
@@ -834,7 +849,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 						modelConfig,
 						messages,
 						options,
-						progress,
+						effectiveProgress,
 						token,
 					);
 				}
@@ -943,7 +958,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 							configWithAuth,
 							messages,
 							options,
-							progress,
+							effectiveProgress,
 							token,
 							account.id,
 						);
@@ -953,7 +968,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 							configWithAuth,
 							messages,
 							options,
-							progress,
+							effectiveProgress,
 							token,
 							account.id,
 						);
@@ -963,7 +978,7 @@ export class GenericModelProvider implements LanguageModelChatProvider {
 							configWithAuth,
 							messages,
 							options,
-							progress,
+							effectiveProgress,
 							token,
 							account.id,
 						);

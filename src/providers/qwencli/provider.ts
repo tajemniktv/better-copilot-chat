@@ -19,6 +19,7 @@ import {
 	type OAuthCredentials,
 } from "../../accounts";
 import type { ModelConfig, ProviderConfig } from "../../types/sharedTypes";
+import { ConfigManager } from "../../utils/configManager";
 import { Logger } from "../../utils/logger";
 import { getUserAgent } from "../../utils/userAgent";
 import { GenericModelProvider } from "../common/genericModelProvider";
@@ -271,13 +272,14 @@ export class QwenCliProvider
 		const thinkingParser = new ThinkingBlockParser();
 		let currentThinkingId: string | null = null;
 		let functionCallsBuffer = "";
+		const hideThinkingInUI = ConfigManager.getHideThinkingInUI();
 		const wrappedProgress: Progress<vscode.LanguageModelResponsePart2> = {
 			report: (part) => {
 				if (part instanceof vscode.LanguageModelTextPart) {
 					// First, parse thinking blocks
 					const { regular, thinking } = thinkingParser.parse(part.value);
 
-					if (thinking) {
+					if (thinking && !hideThinkingInUI) {
 						if (!currentThinkingId) {
 							currentThinkingId = `qwen_thinking_${Date.now()}`;
 						}
@@ -367,6 +369,12 @@ export class QwenCliProvider
 						}
 					}
 				} else {
+					if (
+						hideThinkingInUI &&
+						part instanceof vscode.LanguageModelThinkingPart
+					) {
+						return;
+					}
 					// Forward other parts unchanged
 					progress.report(part);
 				}
@@ -596,7 +604,7 @@ export class QwenCliProvider
 				if (regular && regular.length > 0) {
 					progress.report(new vscode.LanguageModelTextPart(regular));
 				}
-				if (thinking && thinking.length > 0) {
+				if (thinking && thinking.length > 0 && !hideThinkingInUI) {
 					if (!currentThinkingId) {
 						currentThinkingId = `qwen_thinking_${Date.now()}`;
 					}
@@ -604,7 +612,7 @@ export class QwenCliProvider
 						new vscode.LanguageModelThinkingPart(thinking, currentThinkingId),
 					);
 				}
-				if (currentThinkingId) {
+				if (currentThinkingId && !hideThinkingInUI) {
 					progress.report(
 						new vscode.LanguageModelThinkingPart("", currentThinkingId),
 					);

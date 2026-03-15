@@ -160,6 +160,11 @@ export class AccountUI {
 				authType: "apiKey" as const,
 			},
 			{
+				label: "Knox",
+				value: ProviderKey.Knox,
+				authType: "apiKey" as const,
+			},
+			{
 				label: "Lightning AI",
 				value: ProviderKey.LightningAI,
 				authType: "apiKey" as const,
@@ -212,6 +217,11 @@ export class AccountUI {
 			{
 				label: "OpenCode",
 				value: ProviderKey.OpenCode,
+				authType: "apiKey" as const,
+			},
+			{
+				label: "OpenCode Zen Go",
+				value: ProviderKey.Opencodego,
 				authType: "apiKey" as const,
 			},
 			{
@@ -825,6 +835,7 @@ export class AccountUI {
 			huggingface: "Hugging Face",
 			kilo: "Kilo AI",
 			kimi: "Kimi",
+			knox: "Knox",
 			lightningai: "Lightning AI",
 			minimax: "MiniMax",
 			"minimax-coding": "MiniMax Coding",
@@ -836,6 +847,7 @@ export class AccountUI {
 			ollama: "Ollama",
 			openai: "OpenAI",
 			opencode: "OpenCode",
+			opencodego: "OpenCode Zen Go",
 			pollinations: "Pollinations AI",
 			vercelai: "Vercel AI",
 			zenmux: "Zenmux",

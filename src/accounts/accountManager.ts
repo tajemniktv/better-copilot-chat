@@ -51,6 +51,14 @@ export class AccountManager {
 			},
 		],
 		[
+			ProviderKey.AvaSupernova,
+			{
+				supportsMultiAccount: true,
+				supportsOAuth: false,
+				supportsApiKey: false,
+			},
+		],
+		[
 			ProviderKey.Blackbox,
 			{
 				supportsMultiAccount: true,
@@ -139,6 +147,14 @@ export class AccountManager {
 			},
 		],
 		[
+			ProviderKey.Knox,
+			{
+				supportsMultiAccount: true,
+				supportsOAuth: false,
+				supportsApiKey: true,
+			},
+		],
+		[
 			ProviderKey.LightningAI,
 			{
 				supportsMultiAccount: true,
@@ -220,6 +236,14 @@ export class AccountManager {
 		],
 		[
 			ProviderKey.OpenCode,
+			{
+				supportsMultiAccount: true,
+				supportsOAuth: false,
+				supportsApiKey: true,
+			},
+		],
+		[
+			ProviderKey.Opencodego,
 			{
 				supportsMultiAccount: true,
 				supportsOAuth: false,

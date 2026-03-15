@@ -77,6 +77,8 @@ export interface CHPConfig {
 	maxTokens: number;
 	/** Whether to remember the last selected model */
 	rememberLastModel: boolean;
+	/** Whether to hide thinking/reasoning parts in chat UI */
+	hideThinkingInUI: boolean;
 	/** ZhipuAI configuration */
 	zhipu: ZhipuConfig;
 	/** MiniMax configuration */
@@ -146,6 +148,7 @@ export class ConfigManager {
 				config.get<number>("maxTokens", 256000),
 			),
 			rememberLastModel: config.get<boolean>("rememberLastModel", true),
+			hideThinkingInUI: config.get<boolean>("hideThinkingInUI", false),
 			zhipu: {
 				search: {
 					enableMCP: config.get<boolean>("zhipu.search.enableMCP", true), // Default enable MCP mode (Coding Plan exclusive)
@@ -240,6 +243,13 @@ export class ConfigManager {
 	 */
 	static getRememberLastModel(): boolean {
 		return ConfigManager.getConfig().rememberLastModel;
+	}
+
+	/**
+	 * Get whether thinking/reasoning output should be hidden in UI
+	 */
+	static getHideThinkingInUI(): boolean {
+		return ConfigManager.getConfig().hideThinkingInUI;
 	}
 
 	/**
@@ -474,6 +484,18 @@ export class ConfigManager {
 
 		// Create deep copy of configuration
 		const config: ProviderConfig = JSON.parse(JSON.stringify(originalConfig));
+
+		// Apply provider-level baseUrl override (only for Ollama provider)
+		if (providerKey === "ollama" && override.baseUrl) {
+			config.baseUrl = override.baseUrl;
+			Logger.debug(`  Override provider baseUrl: ${override.baseUrl}`);
+			for (const model of config.models) {
+				// Only override model's baseUrl if not already set at model level
+				if (!model.baseUrl) {
+					model.baseUrl = override.baseUrl;
+				}
+			}
+		}
 
 		// Apply provider-level override
 		if (override.sdkMode) {

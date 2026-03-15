@@ -145,6 +145,12 @@ export class SettingsPage {
 		const messageDisposable = panel.webview.onDidReceiveMessage(
 			async (message) => {
 				switch (message.command) {
+					case "setHideThinkingInUI":
+						await SettingsPage.handleSetHideThinkingInUI(
+							message.enabled,
+							panel.webview,
+						);
+						break;
 					case "setLoadBalance":
 						await SettingsPage.handleSetLoadBalance(
 							message.providerId,
@@ -262,6 +268,10 @@ export class SettingsPage {
 		const providers = await SettingsPage.getProvidersInfo();
 		const loadBalanceSettings: Record<string, boolean> = {};
 		const loadBalanceStrategies: Record<string, string> = {};
+		const config = vscode.workspace.getConfiguration("chp");
+		const uiPreferences = {
+			hideThinkingInUI: config.get<boolean>("hideThinkingInUI", false),
+		};
 
 		for (const provider of providers) {
 			loadBalanceSettings[provider.id] =
@@ -277,6 +287,7 @@ export class SettingsPage {
 				providers,
 				loadBalanceSettings,
 				loadBalanceStrategies,
+				uiPreferences,
 			},
 		});
 
@@ -288,9 +299,38 @@ export class SettingsPage {
 					providers,
 					loadBalanceSettings,
 					loadBalanceStrategies,
+					uiPreferences,
 				},
 			});
 		}, 100);
+	}
+
+	private static async handleSetHideThinkingInUI(
+		enabled: boolean,
+		webview: vscode.Webview,
+	): Promise<void> {
+		try {
+			const config = vscode.workspace.getConfiguration("chp");
+			await config.update(
+				"hideThinkingInUI",
+				!!enabled,
+				vscode.ConfigurationTarget.Global,
+			);
+			await SettingsPage.sendStateUpdate(webview);
+			webview.postMessage({
+				command: "showToast",
+				message: enabled
+					? "Thinking output hidden in UI"
+					: "Thinking output visible in UI",
+				type: "success",
+			});
+		} catch (error) {
+			webview.postMessage({
+				command: "showToast",
+				message: `Failed to update UI preference: ${error}`,
+				type: "error",
+			});
+		}
 	}
 
 	/**

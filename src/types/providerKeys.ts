@@ -1,5 +1,6 @@
 export enum ProviderKey {
 	AIHubMix = 'aihubmix',
+	AvaSupernova = 'ava-supernova',
 	Blackbox = 'blackbox',
 	ChatJimmy = 'chatjimmy',
 	Chutes = 'chutes',
@@ -11,6 +12,7 @@ export enum ProviderKey {
 	Huggingface = 'huggingface',
 	Kilo = 'kilo',
 	Kimi = 'kimi',
+	Knox = 'knox',
 	LightningAI = 'lightningai',
 	MiniMax = 'minimax',
 	MiniMaxCoding = 'minimax-coding',
@@ -22,6 +24,7 @@ export enum ProviderKey {
 	Ollama = 'ollama',
 	OpenAI = 'openai',
 	OpenCode = 'opencode',
+	Opencodego = 'opencodego',
 	Pollinations = 'pollinations',
 	QwenCli = 'qwencli',
 	Vercelai = 'vercelai',
