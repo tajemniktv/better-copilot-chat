@@ -5,74 +5,78 @@ const vscode = acquireVsCodeApi();
 
 // State management
 let settingsState = {
-	providers: [],
-	loadBalanceSettings: {},
-	loadBalanceStrategies: {},
-	providerSearchQuery: "",
-	loading: true,
+    providers: [],
+    loadBalanceSettings: {},
+    loadBalanceStrategies: {},
+    uiPreferences: {
+        hideThinkingInUI: false,
+    },
+    providerSearchQuery: "",
+    loading: true,
 };
 const pendingApiKeyRemovals = new Set();
 
 // Available load balance strategies
 const LOAD_BALANCE_STRATEGIES = [
-	{
-		id: "round-robin",
-		name: "Round Robin",
-		description: "Distribute requests evenly across accounts",
-	},
-	{
-		id: "quota-aware",
-		name: "Quota Aware",
-		description: "Prioritize accounts with more remaining quota",
-	},
-	{
-		id: "failover",
-		name: "Failover Only",
-		description: "Use primary account, switch on errors",
-	},
+    {
+        id: "round-robin",
+        name: "Round Robin",
+        description: "Distribute requests evenly across accounts",
+    },
+    {
+        id: "quota-aware",
+        name: "Quota Aware",
+        description: "Prioritize accounts with more remaining quota",
+    },
+    {
+        id: "failover",
+        name: "Failover Only",
+        description: "Use primary account, switch on errors",
+    },
 ];
 
 /**
  * Initialize the settings page
  */
 function _initializeSettingsPage(initialData) {
-	settingsState = {
-		...settingsState,
-		...initialData,
-		loading: false,
-	};
-	renderPage();
+    settingsState = {
+        ...settingsState,
+        ...initialData,
+        loading: false,
+    };
+    renderPage();
 }
 
 /**
  * Render the entire page
  */
 function renderPage() {
-	const app = document.getElementById("app");
-	if (!app) return;
+    const app = document.getElementById("app");
+    if (!app) return;
 
-	app.innerHTML = `
+    app.innerHTML = `
         ${renderHeader()}
         ${renderLoadBalanceSection()}
 	${renderProviderCatalogSection()}
         ${renderAdvancedSection()}
+        ${renderUiPreferencesSection()}
         ${renderInfoSection()}
     `;
 
-	attachEventListeners();
+    attachEventListeners();
 }
 
 /**
  * Render header section
  */
 function renderHeader() {
-	const providers = settingsState.providers || [];
-	const configuredProviders = providers.filter(isProviderConfigured).length;
-	const activeLoadBalanceCount = Object.values(
-		settingsState.loadBalanceSettings || {},
-	).filter(Boolean).length;
+    const providers = settingsState.providers || [];
+    const configuredProviders = providers.filter(isProviderConfigured).length;
+    const activeLoadBalanceCount = Object.values(
+        settingsState.loadBalanceSettings || {},
+    ).filter(Boolean).length;
 
-	return `
+    return `
         <div class="settings-header">
 				<div class="settings-header-main">
 					<div>
@@ -93,7 +97,7 @@ function renderHeader() {
 }
 
 function renderHeaderStat(label, value) {
-	return `
+    return `
 		<div class="header-stat">
 			<span class="header-stat-value">${escapeHtml(String(value))}</span>
 			<span class="header-stat-label">${escapeHtml(label)}</span>
@@ -102,30 +106,30 @@ function renderHeaderStat(label, value) {
 }
 
 function isProviderConfigured(provider) {
-	if ((provider.accountCount || 0) > 0) {
-		return true;
-	}
+    if ((provider.accountCount || 0) > 0) {
+        return true;
+    }
 
-	return (provider.settingsFields || []).some((field) => {
-		if (field.type === "boolean") {
-			return field.value === true;
-		}
+    return (provider.settingsFields || []).some((field) => {
+        if (field.type === "boolean") {
+            return field.value === true;
+        }
 
-		return String(field.value ?? "").trim().length > 0;
-	});
+        return String(field.value ?? "").trim().length > 0;
+    });
 }
 
 /**
  * Render load balance section
  */
 function renderLoadBalanceSection() {
-	const providers = settingsState.providers || [];
+    const providers = settingsState.providers || [];
 
-	// Filter providers that have accounts
-	const providersWithAccounts = providers.filter((p) => p.accountCount > 0);
+    // Filter providers that have accounts
+    const providersWithAccounts = providers.filter((p) => p.accountCount > 0);
 
-	if (providersWithAccounts.length === 0) {
-		return `
+    if (providersWithAccounts.length === 0) {
+        return `
             <div class="settings-section">
                 <h2 class="section-title">
                     ⚖️ Load Balance Settings
@@ -141,9 +145,9 @@ function renderLoadBalanceSection() {
                 </div>
             </div>
         `;
-	}
+    }
 
-	return `
+    return `
         <div class="settings-section">
             <h2 class="section-title">
                 ⚖️ Load Balance Settings
@@ -157,27 +161,27 @@ function renderLoadBalanceSection() {
 }
 
 function renderProviderCatalogSection() {
-	const providers = settingsState.providers || [];
-	const query = (settingsState.providerSearchQuery || "").trim().toLowerCase();
-	const filteredProviders = providers.filter((provider) => {
-		if (!query) {
-			return true;
-		}
-		return (
-			provider.id.toLowerCase().includes(query) ||
-			provider.displayName.toLowerCase().includes(query) ||
-			(provider.description || "").toLowerCase().includes(query)
-		);
-	});
+    const providers = settingsState.providers || [];
+    const query = (settingsState.providerSearchQuery || "").trim().toLowerCase();
+    const filteredProviders = providers.filter((provider) => {
+        if (!query) {
+            return true;
+        }
+        return (
+            provider.id.toLowerCase().includes(query) ||
+            provider.displayName.toLowerCase().includes(query) ||
+            (provider.description || "").toLowerCase().includes(query)
+        );
+    });
 
-	const grouped = groupProvidersByCategory(filteredProviders);
-	const hasResults = filteredProviders.length > 0;
-	const resultSummary =
-		filteredProviders.length === providers.length
-			? `${providers.length} providers`
-			: `${filteredProviders.length} of ${providers.length} providers`;
+    const grouped = groupProvidersByCategory(filteredProviders);
+    const hasResults = filteredProviders.length > 0;
+    const resultSummary =
+        filteredProviders.length === providers.length
+            ? `${providers.length} providers`
+            : `${filteredProviders.length} of ${providers.length} providers`;
 
-	return `
+    return `
         <div class="settings-section">
             <h2 class="section-title">
                 🧩 Provider Configuration
@@ -195,11 +199,10 @@ function renderProviderCatalogSection() {
 				</div>
 				<div class="toolbar-meta">${escapeHtml(resultSummary)}</div>
             </div>
-            ${
-							hasResults
-								? Object.entries(grouped)
-										.map(
-											([category, categoryProviders]) => `
+            ${hasResults
+            ? Object.entries(grouped)
+                .map(
+                    ([category, categoryProviders]) => `
                     <div class="provider-category-group">
                         <h3 class="provider-category-title">${getCategoryLabel(category)}</h3>
                         <div class="provider-list-grid">
@@ -207,29 +210,29 @@ function renderProviderCatalogSection() {
                         </div>
                     </div>
                 `,
-										)
-										.join("")
-								: `<div class="empty-state compact"><p>No providers match your search.</p></div>`
-						}
+                )
+                .join("")
+            : `<div class="empty-state compact"><p>No providers match your search.</p></div>`
+        }
         </div>
     `;
 }
 
 function renderProviderCatalogItem(provider) {
-	const accountCount = provider.accountCount || 0;
-	const capabilityBadges = [
-		provider.supportsApiKey ? "API Key" : null,
-		provider.supportsOAuth ? "OAuth" : null,
-		(provider.settingsFields || []).length ? "Settings" : null,
-	]
-		.filter(Boolean)
-		.map((badge) => `<span class="account-badge">${badge}</span>`)
-		.join("");
-	const setupBadge = isProviderConfigured(provider)
-		? '<span class="account-badge success">Configured</span>'
-		: '<span class="account-badge warning">Setup needed</span>';
+    const accountCount = provider.accountCount || 0;
+    const capabilityBadges = [
+        provider.supportsApiKey ? "API Key" : null,
+        provider.supportsOAuth ? "OAuth" : null,
+        (provider.settingsFields || []).length ? "Settings" : null,
+    ]
+        .filter(Boolean)
+        .map((badge) => `<span class="account-badge">${badge}</span>`)
+        .join("");
+    const setupBadge = isProviderConfigured(provider)
+        ? '<span class="account-badge success">Configured</span>'
+        : '<span class="account-badge warning">Setup needed</span>';
 
-	return `
+    return `
         <div class="provider-catalog-item" data-provider-item="${provider.id}">
             <div class="provider-catalog-head">
                 <div class="provider-title-wrap">
@@ -250,40 +253,39 @@ function renderProviderCatalogItem(provider) {
                 <button class="action-button secondary compact" onclick="openProviderSettings('${provider.id}')">
                     Open Settings
                 </button>
-                ${
-									provider.supportsConfigWizard
-										? `<button class="action-button compact" onclick="runProviderWizard('${provider.id}')">Run Wizard</button>`
-										: ""
-								}
+                ${provider.supportsConfigWizard
+            ? `<button class="action-button compact" onclick="runProviderWizard('${provider.id}')">Run Wizard</button>`
+            : ""
+        }
             </div>
         </div>
     `;
 }
 
 function renderProviderEditor(provider) {
-	const settingsFields = Array.isArray(provider.settingsFields)
-		? provider.settingsFields
-				.map((field) => renderProviderSettingField(provider.id, field))
-				.join("")
-		: "";
+    const settingsFields = Array.isArray(provider.settingsFields)
+        ? provider.settingsFields
+            .map((field) => renderProviderSettingField(provider.id, field))
+            .join("")
+        : "";
 
-	// Render multiple API keys section
-	const apiKeysSection = provider.supportsApiKey
-		? renderApiKeysSection(provider)
-		: "";
+    // Render multiple API keys section
+    const apiKeysSection = provider.supportsApiKey
+        ? renderApiKeysSection(provider)
+        : "";
 
-	const saveButton =
-		(provider.settingsFields || []).length
-			? `
+    const saveButton =
+        (provider.settingsFields || []).length
+            ? `
 			<div class="provider-editor-actions">
 				<button class="action-button compact" onclick="saveProviderSettings('${provider.id}')">
 						Save changes
 				</button>
 			</div>
 		`
-			: "";
+            : "";
 
-	return `
+    return `
 		<div class="provider-editor-grid" data-provider-editor="${provider.id}">
 			${apiKeysSection}
 				${settingsFields}
@@ -293,51 +295,51 @@ function renderProviderEditor(provider) {
 }
 
 function getProviderSettingInputId(providerId, settingKey) {
-	return `provider-setting-${providerId}-${settingKey}`;
+    return `provider-setting-${providerId}-${settingKey}`;
 }
 
 function renderProviderSettingField(providerId, field) {
-	const inputId = getProviderSettingInputId(providerId, field.key);
-	const description = field.description
-		? `<div class="provider-field-description">${escapeHtml(field.description)}</div>`
-		: "";
+    const inputId = getProviderSettingInputId(providerId, field.key);
+    const description = field.description
+        ? `<div class="provider-field-description">${escapeHtml(field.description)}</div>`
+        : "";
 
-	if (field.type === "enum") {
-		const options = Array.isArray(field.options)
-			? field.options
-					.map(
-						(option) => `
+    if (field.type === "enum") {
+        const options = Array.isArray(field.options)
+            ? field.options
+                .map(
+                    (option) => `
 							<option value="${escapeHtml(String(option.value))}" ${String(field.value) === String(option.value) ? "selected" : ""}>${escapeHtml(option.label)}</option>
 						`,
-					)
-					.join("")
-			: "";
+                )
+                .join("")
+            : "";
 
-		return `
+        return `
 			<div class="provider-editor-field">
 				<label for="${inputId}">${escapeHtml(field.label)}</label>
 				<select id="${inputId}">${options}</select>
 				${description}
 			</div>
 		`;
-	}
+    }
 
-	if (field.type === "boolean") {
-		return `
+    if (field.type === "boolean") {
+        return `
 			<div class="provider-editor-field">
 				<label for="${inputId}">${escapeHtml(field.label)}</label>
 				<input id="${inputId}" type="checkbox" ${field.value ? "checked" : ""} />
 				${description}
 			</div>
 		`;
-	}
+    }
 
-	const inputType = field.type === "number" ? "number" : "text";
-	const placeholder = field.placeholder
-		? `placeholder="${escapeHtml(field.placeholder)}"`
-		: "";
+    const inputType = field.type === "number" ? "number" : "text";
+    const placeholder = field.placeholder
+        ? `placeholder="${escapeHtml(field.placeholder)}"`
+        : "";
 
-	return `
+    return `
 		<div class="provider-editor-field">
 			<label for="${inputId}">${escapeHtml(field.label)}</label>
 			<input
@@ -351,15 +353,15 @@ function renderProviderSettingField(providerId, field) {
 }
 
 function renderApiKeysSection(provider) {
-	const apiKeys = provider.apiKeys || [];
-	const hasApiKeys = apiKeys.length > 0;
-	const supportsLoadBalance =
-		provider.supportsLoadBalance && apiKeys.length >= 2;
-	const loadBalanceEnabled = provider.loadBalanceEnabled || false;
+    const apiKeys = provider.apiKeys || [];
+    const hasApiKeys = apiKeys.length > 0;
+    const supportsLoadBalance =
+        provider.supportsLoadBalance && apiKeys.length >= 2;
+    const loadBalanceEnabled = provider.loadBalanceEnabled || false;
 
-	// Render load balancing toggle if supported
-	const loadBalanceSection = supportsLoadBalance
-		? `
+    // Render load balancing toggle if supported
+    const loadBalanceSection = supportsLoadBalance
+        ? `
         <div class="api-key-lb-section">
             <div class="api-key-lb-toggle">
                 <span class="api-key-lb-label">
@@ -377,12 +379,12 @@ function renderApiKeysSection(provider) {
             ${loadBalanceEnabled ? renderStrategySelector(provider.id, provider.loadBalanceStrategy) : ""}
         </div>
     `
-		: "";
+        : "";
 
-	// Render list of existing API keys
-	const apiKeyList = apiKeys
-		.map(
-			(apiKey) => `
+    // Render list of existing API keys
+    const apiKeyList = apiKeys
+        .map(
+            (apiKey) => `
         <div class="api-key-item ${apiKey.isActive ? "active" : ""}">
             <div class="api-key-info">
                 <span class="api-key-name">${escapeHtml(apiKey.displayName)}</span>
@@ -395,11 +397,11 @@ function renderApiKeysSection(provider) {
             </div>
         </div>
     `,
-		)
-		.join("");
+        )
+        .join("");
 
-	// Add new API key form
-	const addApiKeyForm = `
+    // Add new API key form
+    const addApiKeyForm = `
         <div class="api-key-add-form">
             <input
                 id="provider-apikey-${provider.id}"
@@ -417,7 +419,7 @@ function renderApiKeysSection(provider) {
         </div>
     `;
 
-	return `
+    return `
         <div class="provider-editor-field api-keys-section">
             <label>API Keys</label>
             ${loadBalanceSection}
@@ -428,48 +430,48 @@ function renderApiKeysSection(provider) {
 }
 
 function formatDate(dateStr) {
-	if (!dateStr) return "Unknown";
-	try {
-		const date = new Date(dateStr);
-		return date.toLocaleDateString();
-	} catch {
-		return "Unknown";
-	}
+    if (!dateStr) return "Unknown";
+    try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString();
+    } catch {
+        return "Unknown";
+    }
 }
 
 function groupProvidersByCategory(providers) {
-	return providers.reduce((acc, provider) => {
-		const category = provider.category || "other";
-		if (!acc[category]) {
-			acc[category] = [];
-		}
-		acc[category].push(provider);
-		return acc;
-	}, {});
+    return providers.reduce((acc, provider) => {
+        const category = provider.category || "other";
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push(provider);
+        return acc;
+    }, {});
 }
 
 function getCategoryLabel(category) {
-	const labels = {
-		openai: "OpenAI SDK",
-		anthropic: "Anthropic SDK",
-		oauth: "OAuth Required",
-	};
-	return labels[category] || "Other";
+    const labels = {
+        openai: "OpenAI SDK",
+        anthropic: "Anthropic SDK",
+        oauth: "OAuth Required",
+    };
+    return labels[category] || "Other";
 }
 
 /**
  * Render a provider card
  */
 function renderProviderCard(provider) {
-	const isEnabled = settingsState.loadBalanceSettings[provider.id] || false;
-	const currentStrategy =
-		settingsState.loadBalanceStrategies[provider.id] || "round-robin";
-	const accountCount = provider.accountCount || 0;
-	const statusClass = isEnabled ? "enabled" : "disabled";
-	const statusText = isEnabled ? "Enabled" : "Disabled";
-	const canEnable = accountCount >= 2;
+    const isEnabled = settingsState.loadBalanceSettings[provider.id] || false;
+    const currentStrategy =
+        settingsState.loadBalanceStrategies[provider.id] || "round-robin";
+    const accountCount = provider.accountCount || 0;
+    const statusClass = isEnabled ? "enabled" : "disabled";
+    const statusText = isEnabled ? "Enabled" : "Disabled";
+    const canEnable = accountCount >= 2;
 
-	return `
+    return `
         <div class="settings-card" data-provider="${provider.id}">
             <div class="card-header">
                 <div class="card-title">
@@ -513,14 +515,14 @@ function renderProviderCard(provider) {
  * Render strategy selector
  */
 function renderStrategySelector(providerId, currentStrategy) {
-	return `
+    return `
         <div class="strategy-container">
             <div class="strategy-label">
                 <span class="label-text">Load Balance Strategy</span>
             </div>
             <div class="strategy-options">
                 ${LOAD_BALANCE_STRATEGIES.map(
-									(strategy) => `
+        (strategy) => `
                     <label class="strategy-option ${currentStrategy === strategy.id ? "selected" : ""}">
                         <input type="radio" 
                                name="strategy-${providerId}" 
@@ -533,7 +535,7 @@ function renderStrategySelector(providerId, currentStrategy) {
                         </div>
                     </label>
                 `,
-								).join("")}
+    ).join("")}
             </div>
         </div>
     `;
@@ -543,7 +545,7 @@ function renderStrategySelector(providerId, currentStrategy) {
  * Render advanced section
  */
 function renderAdvancedSection() {
-	return `
+    return `
         <div class="settings-section">
             <h2 class="section-title">
                 Quick Actions
@@ -560,11 +562,40 @@ function renderAdvancedSection() {
     `;
 }
 
+function renderUiPreferencesSection() {
+    const hideThinkingInUI = Boolean(
+        settingsState.uiPreferences?.hideThinkingInUI,
+    );
+
+    return `
+        <div class="settings-section">
+            <h2 class="section-title">
+                UI Preferences
+            </h2>
+            <div class="settings-card">
+                <div class="toggle-container">
+                    <div class="toggle-label">
+                        <span class="label-text">Hide all thinking in chat UI</span>
+                        <span class="label-hint">Completely suppress reasoning/thinking blocks from provider responses.</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox"
+                               id="toggle-hide-thinking-ui"
+                               ${hideThinkingInUI ? "checked" : ""}
+                               onchange="setHideThinkingInUI(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 /**
  * Render info section
  */
 function renderInfoSection() {
-	return `
+    return `
         <div class="divider"></div>
         <div class="info-box">
             <span class="info-icon"></span>
@@ -587,269 +618,284 @@ function renderInfoSection() {
 }
 
 function _saveProviderSettings(providerId) {
-	const provider = (settingsState.providers || []).find(
-		(p) => p.id === providerId,
-	);
-	if (!provider) {
-		return;
-	}
+    const provider = (settingsState.providers || []).find(
+        (p) => p.id === providerId,
+    );
+    if (!provider) {
+        return;
+    }
 
-	const payload = {};
-	const settings = {};
-	for (const field of provider.settingsFields || []) {
-		const input = document.getElementById(
-			getProviderSettingInputId(providerId, field.key),
-		);
-		if (!input) {
-			continue;
-		}
+    const payload = {};
+    const settings = {};
+    for (const field of provider.settingsFields || []) {
+        const input = document.getElementById(
+            getProviderSettingInputId(providerId, field.key),
+        );
+        if (!input) {
+            continue;
+        }
 
-		if (field.type === "boolean") {
-			settings[field.key] = Boolean(input.checked);
-			continue;
-		}
+        if (field.type === "boolean") {
+            settings[field.key] = Boolean(input.checked);
+            continue;
+        }
 
-		if (field.type === "number") {
-			const rawValue = (input.value || "").trim();
-			settings[field.key] = rawValue === "" ? Number(field.value || 0) : Number(rawValue);
-			continue;
-		}
+        if (field.type === "number") {
+            const rawValue = (input.value || "").trim();
+            settings[field.key] = rawValue === "" ? Number(field.value || 0) : Number(rawValue);
+            continue;
+        }
 
-		settings[field.key] = input.value;
-	}
+        settings[field.key] = input.value;
+    }
 
-	if (Object.keys(settings).length > 0) {
-		payload.settings = settings;
-	}
+    if (Object.keys(settings).length > 0) {
+        payload.settings = settings;
+    }
 
-	vscode.postMessage({
-		command: "saveProviderSettings",
-		providerId,
-		payload,
-	});
+    vscode.postMessage({
+        command: "saveProviderSettings",
+        providerId,
+        payload,
+    });
 }
 
 function _addApiKey(providerId) {
-	const provider = (settingsState.providers || []).find(
-		(p) => p.id === providerId,
-	);
-	if (!provider) {
-		return;
-	}
+    const provider = (settingsState.providers || []).find(
+        (p) => p.id === providerId,
+    );
+    if (!provider) {
+        return;
+    }
 
-	const apiKeyInput = document.getElementById(`provider-apikey-${providerId}`);
-	const apiKeyNameInput = document.getElementById(
-		`provider-apikey-name-${providerId}`,
-	);
+    const apiKeyInput = document.getElementById(`provider-apikey-${providerId}`);
+    const apiKeyNameInput = document.getElementById(
+        `provider-apikey-name-${providerId}`,
+    );
 
-	if (!apiKeyInput) {
-		return;
-	}
+    if (!apiKeyInput) {
+        return;
+    }
 
-	const apiKey = (apiKeyInput.value || "").trim();
-	if (!apiKey) {
-		showToast("Please enter an API key", "error");
-		return;
-	}
+    const apiKey = (apiKeyInput.value || "").trim();
+    if (!apiKey) {
+        showToast("Please enter an API key", "error");
+        return;
+    }
 
-	const displayName = (apiKeyNameInput?.value || "").trim();
+    const displayName = (apiKeyNameInput?.value || "").trim();
 
-	vscode.postMessage({
-		command: "addApiKey",
-		providerId,
-		payload: {
-			apiKey,
-			displayName: displayName || undefined,
-		},
-	});
+    vscode.postMessage({
+        command: "addApiKey",
+        providerId,
+        payload: {
+            apiKey,
+            displayName: displayName || undefined,
+        },
+    });
 
-	// Clear inputs after sending
-	apiKeyInput.value = "";
-	if (apiKeyNameInput) {
-		apiKeyNameInput.value = "";
-	}
+    // Clear inputs after sending
+    apiKeyInput.value = "";
+    if (apiKeyNameInput) {
+        apiKeyNameInput.value = "";
+    }
 }
 
 function _removeApiKey(providerId, apiKeyId) {
-	const removalKey = `${providerId}:${apiKeyId}`;
-	if (pendingApiKeyRemovals.has(removalKey)) {
-		return;
-	}
-	pendingApiKeyRemovals.add(removalKey);
+    const removalKey = `${providerId}:${apiKeyId}`;
+    if (pendingApiKeyRemovals.has(removalKey)) {
+        return;
+    }
+    pendingApiKeyRemovals.add(removalKey);
 
-	vscode.postMessage({
-		command: "removeApiKey",
-		providerId,
-		apiKeyId,
-	});
+    vscode.postMessage({
+        command: "removeApiKey",
+        providerId,
+        apiKeyId,
+    });
 
-	// Prevent duplicate rapid-click requests
-	setTimeout(() => {
-		pendingApiKeyRemovals.delete(removalKey);
-	}, 1500);
+    // Prevent duplicate rapid-click requests
+    setTimeout(() => {
+        pendingApiKeyRemovals.delete(removalKey);
+    }, 1500);
 }
 
 function _switchApiKey(providerId, apiKeyId) {
-	vscode.postMessage({
-		command: "switchApiKey",
-		providerId,
-		apiKeyId,
-	});
+    vscode.postMessage({
+        command: "switchApiKey",
+        providerId,
+        apiKeyId,
+    });
 }
 
 function _openProviderSettings(providerId) {
-	vscode.postMessage({
-		command: "openProviderSettings",
-		providerId,
-	});
+    vscode.postMessage({
+        command: "openProviderSettings",
+        providerId,
+    });
 }
 
 function _runProviderWizard(providerId) {
-	vscode.postMessage({
-		command: "runProviderWizard",
-		providerId,
-	});
+    vscode.postMessage({
+        command: "runProviderWizard",
+        providerId,
+    });
 }
 
 /**
  * Handle toggle change
  */
 function _handleToggleChange(providerId, enabled) {
-	// Update local state
-	settingsState.loadBalanceSettings[providerId] = enabled;
+    // Update local state
+    settingsState.loadBalanceSettings[providerId] = enabled;
 
-	// Send message to extension
-	vscode.postMessage({
-		command: "setLoadBalance",
-		providerId: providerId,
-		enabled: enabled,
-	});
+    // Send message to extension
+    vscode.postMessage({
+        command: "setLoadBalance",
+        providerId: providerId,
+        enabled: enabled,
+    });
 
-	// Re-render to show/hide strategy selector
-	renderPage();
-	showToast(
-		enabled ? "Load balancing enabled" : "Load balancing disabled",
-		"success",
-	);
+    // Re-render to show/hide strategy selector
+    renderPage();
+    showToast(
+        enabled ? "Load balancing enabled" : "Load balancing disabled",
+        "success",
+    );
 }
 
 /**
  * Handle strategy change
  */
 function _handleStrategyChange(providerId, strategy) {
-	// Update local state
-	settingsState.loadBalanceStrategies[providerId] = strategy;
+    // Update local state
+    settingsState.loadBalanceStrategies[providerId] = strategy;
 
-	// Send message to extension
-	vscode.postMessage({
-		command: "setLoadBalanceStrategy",
-		providerId: providerId,
-		strategy: strategy,
-	});
+    // Send message to extension
+    vscode.postMessage({
+        command: "setLoadBalanceStrategy",
+        providerId: providerId,
+        strategy: strategy,
+    });
 
-	// Update UI
-	renderPage();
-	showToast(`Strategy changed to ${strategy}`, "success");
+    // Update UI
+    renderPage();
+    showToast(`Strategy changed to ${strategy}`, "success");
 }
 
 /**
  * Open account manager
  */
 function _openAccountManager() {
-	vscode.postMessage({
-		command: "openAccountManager",
-	});
+    vscode.postMessage({
+        command: "openAccountManager",
+    });
 }
 
 /**
  * Refresh settings
  */
 function _refreshSettings() {
-	vscode.postMessage({
-		command: "refresh",
-	});
-	showToast("Refreshing settings...", "success");
+    vscode.postMessage({
+        command: "refresh",
+    });
+    showToast("Refreshing settings...", "success");
+}
+
+function _setHideThinkingInUI(enabled) {
+    const hideThinkingInUI = Boolean(enabled);
+    settingsState.uiPreferences = {
+        ...(settingsState.uiPreferences || {}),
+        hideThinkingInUI,
+    };
+
+    vscode.postMessage({
+        command: "setHideThinkingInUI",
+        enabled: hideThinkingInUI,
+    });
+
+    renderPage();
 }
 
 /**
  * Show toast notification
  */
 function showToast(message, type = "success") {
-	// Remove existing toast
-	const existingToast = document.querySelector(".toast");
-	if (existingToast) {
-		existingToast.remove();
-	}
+    // Remove existing toast
+    const existingToast = document.querySelector(".toast");
+    if (existingToast) {
+        existingToast.remove();
+    }
 
-	const toast = document.createElement("div");
-	toast.className = `toast ${type}`;
-	toast.innerHTML = `
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
         <span>${type === "success" ? "OK" : "NO"}</span>
         <span>${escapeHtml(message)}</span>
     `;
-	document.body.appendChild(toast);
+    document.body.appendChild(toast);
 
-	// Auto remove after 3 seconds
-	setTimeout(() => {
-		toast.style.animation = "slideIn 0.3s ease reverse";
-		setTimeout(() => toast.remove(), 300);
-	}, 3000);
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = "slideIn 0.3s ease reverse";
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 /**
  * Attach event listeners
  */
 function attachEventListeners() {
-	const searchInput = document.getElementById("provider-search-input");
-	if (searchInput) {
-		searchInput.addEventListener("input", (event) => {
-			const target = event.target;
-			settingsState.providerSearchQuery = target?.value || "";
-			renderPage();
-			const nextSearchInput = document.getElementById(
-				"provider-search-input",
-			);
-			if (nextSearchInput) {
-				const cursor = settingsState.providerSearchQuery.length;
-				nextSearchInput.focus();
-				nextSearchInput.setSelectionRange(cursor, cursor);
-			}
-		});
-	}
+    const searchInput = document.getElementById("provider-search-input");
+    if (searchInput) {
+        searchInput.addEventListener("input", (event) => {
+            const target = event.target;
+            settingsState.providerSearchQuery = target?.value || "";
+            renderPage();
+            const nextSearchInput = document.getElementById(
+                "provider-search-input",
+            );
+            if (nextSearchInput) {
+                const cursor = settingsState.providerSearchQuery.length;
+                nextSearchInput.focus();
+                nextSearchInput.setSelectionRange(cursor, cursor);
+            }
+        });
+    }
 }
 
 /**
  * Escape HTML to prevent XSS
  */
 function escapeHtml(text) {
-	if (!text) return "";
-	const map = {
-		"&": "&amp;",
-		"<": "&lt;",
-		">": "&gt;",
-		'"': "&quot;",
-		"'": "&#039;",
-	};
-	return String(text).replace(/[&<>"']/g, (char) => map[char]);
+    if (!text) return "";
+    const map = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+    };
+    return String(text).replace(/[&<>"']/g, (char) => map[char]);
 }
 
 /**
  * Handle messages from extension
  */
 window.addEventListener("message", (event) => {
-	const message = event.data;
-	switch (message.command) {
-		case "updateState":
-			settingsState = {
-				...settingsState,
-				...message.data,
-			};
-			renderPage();
-			break;
-		case "showToast":
-			showToast(message.message, message.type);
-			break;
-	}
+    const message = event.data;
+    switch (message.command) {
+        case "updateState":
+            settingsState = {
+                ...settingsState,
+                ...message.data,
+            };
+            renderPage();
+            break;
+        case "showToast":
+            showToast(message.message, message.type);
+            break;
+    }
 });
 
 // Expose handlers for inline HTML event attributes
@@ -864,10 +910,11 @@ window.saveProviderSettings = _saveProviderSettings;
 window.addApiKey = _addApiKey;
 window.removeApiKey = _removeApiKey;
 window.switchApiKey = _switchApiKey;
+window.setHideThinkingInUI = _setHideThinkingInUI;
 
 // Ask extension for current state when the page loads
 window.addEventListener("DOMContentLoaded", () => {
-	vscode.postMessage({
-		command: "refresh",
-	});
+    vscode.postMessage({
+        command: "refresh",
+    });
 });

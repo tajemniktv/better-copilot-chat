@@ -359,6 +359,12 @@
                     "description": "When enabled, records and automatically restores the last used extension-provided model. (VSCode 1.106.0 will reset to default optimal model [e.g., Claude Sonnet 4.5])",
                     "scope": "application"
                 },
+                "chp.hideThinkingInUI": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Completely hide model thinking/reasoning output in chat UI across all providers.",
+                    "scope": "application"
+                },
                 "chp.zhipu.search.enableMCP": {
                     "type": "boolean",
                     "default": true,

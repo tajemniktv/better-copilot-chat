@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.1] - 2026-03-15
+## [0.3.1] - Unreleased
 
 ### Added
 
@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
     - MiniMax M2.5 uses Anthropic SDK at `/messages`.
     - Added provider support in account management, account UI, and status bar components.
     - Added `chp.opencodego.setApiKey` command for API key configuration.
+
+- **Hide thinking/reasoning UI option**: Added global setting `chp.hideThinkingInUI` and a toggle in the Settings page to completely suppress thinking/reasoning output blocks across all providers.
 
 ## [0.3.0] - 2026-03-13
 

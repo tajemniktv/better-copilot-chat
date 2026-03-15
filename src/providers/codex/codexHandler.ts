@@ -22,6 +22,7 @@ import {
 	formatRateLimitSummary,
 	parseRateLimitFromHeaders,
 } from "../../utils/rateLimitParser";
+import { ConfigManager } from "../../utils/configManager";
 import type { UsageLimitError } from "./codexTypes";
 
 const CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex";
@@ -816,6 +817,13 @@ export class CodexHandler {
 					let currentThinkingId: string | null = null;
 					let thinkingContentBuffer = "";
 					const MAX_THINKING_BUFFER_LENGTH = 500; // Buffer size before flushing thinking content
+					const hideThinkingInUI = ConfigManager.getHideThinkingInUI();
+					const reportThinkingPart = (value: string, thinkingId: string) => {
+						if (hideThinkingInUI) {
+							return;
+						}
+						progress.report(new vscode.LanguageModelThinkingPart(value, thinkingId));
+					};
 
 					res.on("data", (chunk: Buffer) => {
 						if (token.isCancellationRequested) {
@@ -870,11 +878,9 @@ export class CodexHandler {
 													// Flush remaining thinking buffer
 													if (thinkingContentBuffer.length > 0) {
 														try {
-															progress.report(
-																new vscode.LanguageModelThinkingPart(
-																	thinkingContentBuffer,
-																	currentThinkingId,
-																),
+															reportThinkingPart(
+																thinkingContentBuffer,
+																currentThinkingId,
 															);
 															thinkingContentBuffer = "";
 														} catch (e) {
@@ -885,12 +891,7 @@ export class CodexHandler {
 													}
 													// Close thinking block
 													try {
-														progress.report(
-															new vscode.LanguageModelThinkingPart(
-																"",
-																currentThinkingId,
-															),
-														);
+														reportThinkingPart("", currentThinkingId);
 														Logger.debug(
 															`[codex] Closed thinking block before text output: ${currentThinkingId}`,
 														);
@@ -928,6 +929,9 @@ export class CodexHandler {
 										}
 										case "response.reasoning_summary_text.delta": {
 											// Reasoning/thinking summary delta - display as thinking part
+											if (hideThinkingInUI) {
+												break;
+											}
 											const delta = data.delta;
 											if (delta) {
 												_hasResponse = true;
@@ -949,11 +953,9 @@ export class CodexHandler {
 													MAX_THINKING_BUFFER_LENGTH
 												) {
 													try {
-														progress.report(
-															new vscode.LanguageModelThinkingPart(
-																thinkingContentBuffer,
-																currentThinkingId,
-															),
+														reportThinkingPart(
+															thinkingContentBuffer,
+															currentThinkingId,
 														);
 														Logger.trace(
 															`[codex] Flushed thinking buffer: ${thinkingContentBuffer.length} chars`,
@@ -970,16 +972,19 @@ export class CodexHandler {
 										}
 										case "response.reasoning_summary_text.done": {
 											// Reasoning/thinking summary complete - flush remaining buffer and close thinking block
+											if (hideThinkingInUI) {
+												thinkingContentBuffer = "";
+												currentThinkingId = null;
+												break;
+											}
 											if (
 												thinkingContentBuffer.length > 0 &&
 												currentThinkingId
 											) {
 												try {
-													progress.report(
-														new vscode.LanguageModelThinkingPart(
-															thinkingContentBuffer,
-															currentThinkingId,
-														),
+													reportThinkingPart(
+														thinkingContentBuffer,
+														currentThinkingId,
 													);
 													Logger.debug(
 														`[codex] Final thinking flush: ${thinkingContentBuffer.length} chars`,
@@ -995,12 +1000,7 @@ export class CodexHandler {
 											// Close the thinking block
 											if (currentThinkingId) {
 												try {
-													progress.report(
-														new vscode.LanguageModelThinkingPart(
-															"",
-															currentThinkingId,
-														),
-													);
+													reportThinkingPart("", currentThinkingId);
 													Logger.debug(
 														`[codex] Closed thinking block: ${currentThinkingId}`,
 													);
@@ -1016,6 +1016,9 @@ export class CodexHandler {
 										case "response.reasoning_text.delta":
 										case "response.reasoning.delta": {
 											// Reasoning/thinking delta (official event is response.reasoning_text.delta)
+											if (hideThinkingInUI) {
+												break;
+											}
 											const delta = data.delta?.text || data.delta || data.text;
 											if (delta && typeof delta === "string") {
 												_hasResponse = true;
@@ -1034,11 +1037,9 @@ export class CodexHandler {
 													MAX_THINKING_BUFFER_LENGTH
 												) {
 													try {
-														progress.report(
-															new vscode.LanguageModelThinkingPart(
-																thinkingContentBuffer,
-																currentThinkingId,
-															),
+														reportThinkingPart(
+															thinkingContentBuffer,
+															currentThinkingId,
 														);
 														thinkingContentBuffer = "";
 													} catch (e) {
@@ -1053,6 +1054,11 @@ export class CodexHandler {
 										case "response.reasoning_text.done":
 										case "response.reasoning.done": {
 											// Reasoning/thinking done (official event is response.reasoning_text.done)
+											if (hideThinkingInUI) {
+												thinkingContentBuffer = "";
+												currentThinkingId = null;
+												break;
+											}
 											if (
 												thinkingContentBuffer.length === 0 &&
 												typeof data.text === "string" &&
@@ -1065,11 +1071,9 @@ export class CodexHandler {
 												currentThinkingId
 											) {
 												try {
-													progress.report(
-														new vscode.LanguageModelThinkingPart(
-															thinkingContentBuffer,
-															currentThinkingId,
-														),
+													reportThinkingPart(
+														thinkingContentBuffer,
+														currentThinkingId,
 													);
 													thinkingContentBuffer = "";
 												} catch (e) {
@@ -1080,12 +1084,7 @@ export class CodexHandler {
 											}
 											if (currentThinkingId) {
 												try {
-													progress.report(
-														new vscode.LanguageModelThinkingPart(
-															"",
-															currentThinkingId,
-														),
-													);
+													reportThinkingPart("", currentThinkingId);
 													Logger.debug(
 														`[codex] Closed thinking block (reasoning_text.done): ${currentThinkingId}`,
 													);
@@ -1676,11 +1675,9 @@ export class CodexHandler {
 						// Flush any remaining thinking content
 						if (thinkingContentBuffer.length > 0 && currentThinkingId) {
 							try {
-								progress.report(
-									new vscode.LanguageModelThinkingPart(
-										thinkingContentBuffer,
-										currentThinkingId,
-									),
+								reportThinkingPart(
+									thinkingContentBuffer,
+									currentThinkingId,
 								);
 								Logger.debug(
 									`[codex] Flushed remaining thinking on stream end: ${thinkingContentBuffer.length} chars`,
@@ -1695,9 +1692,7 @@ export class CodexHandler {
 						// Close thinking block if still open
 						if (currentThinkingId) {
 							try {
-								progress.report(
-									new vscode.LanguageModelThinkingPart("", currentThinkingId),
-								);
+								reportThinkingPart("", currentThinkingId);
 								Logger.debug(
 									`[codex] Closed thinking block on stream end: ${currentThinkingId}`,
 								);

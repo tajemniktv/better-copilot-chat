@@ -77,6 +77,8 @@ export interface CHPConfig {
 	maxTokens: number;
 	/** Whether to remember the last selected model */
 	rememberLastModel: boolean;
+	/** Whether to hide thinking/reasoning parts in chat UI */
+	hideThinkingInUI: boolean;
 	/** ZhipuAI configuration */
 	zhipu: ZhipuConfig;
 	/** MiniMax configuration */
@@ -146,6 +148,7 @@ export class ConfigManager {
 				config.get<number>("maxTokens", 256000),
 			),
 			rememberLastModel: config.get<boolean>("rememberLastModel", true),
+			hideThinkingInUI: config.get<boolean>("hideThinkingInUI", false),
 			zhipu: {
 				search: {
 					enableMCP: config.get<boolean>("zhipu.search.enableMCP", true), // Default enable MCP mode (Coding Plan exclusive)
@@ -240,6 +243,13 @@ export class ConfigManager {
 	 */
 	static getRememberLastModel(): boolean {
 		return ConfigManager.getConfig().rememberLastModel;
+	}
+
+	/**
+	 * Get whether thinking/reasoning output should be hidden in UI
+	 */
+	static getHideThinkingInUI(): boolean {
+		return ConfigManager.getConfig().hideThinkingInUI;
 	}
 
 	/**
