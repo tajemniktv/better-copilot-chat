@@ -10,7 +10,7 @@
 		"node_modules": true
 	},
 	// Turn off tsc task auto detection since we use esbuild
-	"typescript.tsc.autoDetect": "off",
+	"js/ts.tsc.autoDetect": "off",
 	// Enable proposed APIs for extension development
 	"extensions.experimental.affinity": {
 		"vicanent.copilot-helper-pro": 1
@@ -44,7 +44,7 @@
 	"debug.openDebug": "openOnDebugBreak",
 	// esbuild related optimizations
 	"eslint.validate": ["javascript", "typescript"],
-	"typescript.preferences.includePackageJsonAutoImports": "auto",
+	"js/ts.preferences.includePackageJsonAutoImports": "auto",
 	// Provide JSON Schema validation and hints for provider configuration
 	"json.schemas": [
 		{
